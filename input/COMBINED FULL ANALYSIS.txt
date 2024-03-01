@@ -1,0 +1,71 @@
+
+CYPHERTEXT:
+VZ,d'>]kOgAYpS0(FAlhKJ\G,b_,,9L,,qR,JR_AHnFNe,YRr)Z]g/T3L+o\>RK=4/@Q!i5;Y5G,"85G6Ld<JFN%5#6Ql\+qIa4R"[V90q5lJFDpni7-d9c4N[MTW(i3X9^<25Z1N;R
+Wo5g+qAhrbjl<\m3FjS$H&[]IiQKr'<rFf0";UI]*qFNDMoUOfpGd@.N(GbXqCr<FJM+(,JBU3D AU3BQGd!`nUAFN/rf!,@Hq&0MNkqCOA156Fgif*k,14JOAKb7HkCpGhG,"i;T*Qo`,J#NaiS2 
+X7.bdnj$QT?SY[RcF?\!6iDAK02T'N-b^.i5g+qZr[-MT<m'`9FN0MB<O#_2"09WofPn"rjG.#FbQ&4XbQ+%*9jUDd-Y9Q<Jobac#J-pA$nFN^,W-rPm]g^noV[f1gQ>iOPF;BgYiE%<bHSN9+!#72r"ZIN<'mZjrL+<M;':Fj
+Y/OT(\+J05G#')SHi?r]Urd:@7WA'9W4A+#2&MYg\28oal$nX]1+8NAg:jh;63TJECH5Y\r +fL4Dpl"AN.]ZiQ$j2B[5n J?D0a1FcnN,b26CM?RbW<N92n:p>r1/@d)W3jHV
+Z`r13[d&m.jiI[A\d:74";Xj0XbKR<m?dJmW?g\+C5ZT/+fp'o=23H'E<Jq&N@>-5G,"i?kOc@XqQGT':N]d@A-94$b;li ,87Oc'KkU`6ZC]N5GPe>Q?6>,Jg_7Egk1(N^gc52WGrE+Jl^,9hTdp_;nF-9NM>J3]Xdk>= NgJ9PRjOnH%Cc=I+(7
+[EQGcDgiROA_dZ[)";Xj@XcgIBNLV;bi*6;T-g>O`GegYSdE3+j-C2r]CJ1Peko_hgiZWM&:XjT(m4eUTXiJASNC?o"cnY4;aB+<5#Vr)A7R8h`edPiB>/$9XZgrJ9F'EJUJ$i*j:F2mWrD2:dO;?F2_[30
+\#X]UIbC r9"BI?-p1MC&j`1^<T7TX(F]gc^N?'-YBJ)dRp0dCT1S:C9Q2niYINqVqZKUb)hC)9FJFjak&,!C$N+C)&G:>^Olo@c].i\Z19GahV;X'aC.JV.](h4k&1"k%&GB?grJ9G:E)="Y.ekQg!G2lkN/TFplh24GrdKn7Hkjc.:pQ
+]eMAW-T"4Q;>=-9B<G,"i?EGpY1/17K1MC^:VqQHF2")[Nd&c-UTECpDfC]qn=S]grJ9G-3N?m?P1F]FbiYA.\?SN>?PA+L;3Q@RkedrjHm'1+.6[8pnX]1+.a!.iW0^P2JdPc2&(>?raq&<V73d[.hPQ?R>2,jYR1F6Z-'0)Nc1Mg4Mn4kif,jZ
+^_,j@B1>*XJq%B;=Y]5>C9#]<lG`G,cFjTW<N;d=S%iZb4YRb>G][^>JM+2"SBNaha='f*q-$J4AF?FG>D9QBJ-NaJ49bWiK,8f0$TM;o:gAb;H_grJ9G,b),alZ_8Tq]8<Tn^+C.bdnk@%p]0,H8OCF4f#?L*N!C.JU.]UIgKOnf
+
+
+PLAINTEXT:
+1-The FitnessGram Pacer TestTestTest is a multistage aerobic capacity test that is a multistage aerobic gets more difficult as it continues
+2-The FitnessGram Pacer getsTestmore is a multistage Student exam that progressive is a multistage Student exam first get ready and then start running
+3-The FitnessGram Pacer Line up at the start is a multistage childrent exam that teachers do to annoy is a multistage childrent exam why did you forget your pants at home
+4-This Fit people test will begin in 30 seconds The running speed starts slowly but gets faster each minute after you hear this signal
+5-This Fitness people test will begin in 30 seconds so Line up at the start The running speed starts slowly but dont get fooled cuz it gets faster each minute after you hear this signal
+6-This Fit people tests could begin in 30 seconds nineteen dollar fortnite cards The running speed starts slowly who wants them and yes im giving them away
+7-This Fitness is the second time you fail a lap before the sound signal Remember to run in a straight line bro The test will begin on the word start On your mark get ready start
+8-This Fitness is the second or third time you fail a lap before the sound Remember to run in a straight line today The test will begin on the word start of this mark your test is over
+9-This Fitness is the second time you fail a lap before the sound aerobic Remember to run in a straight line now The test will begin on the word start mark your test is over
+
+
+ISOMPRHS:
+(they appear in groups of three due to the plaintexts repetitions.)
+
+Z,d'>]kOgAYpS0(FAlhKJ\G
+o5g+qAhrbjl<\m3FjS$H&[]
+7.bdnj$QT?SY[RcF?\!6iDA
+
+(this is a group of six)
+JR_AHnFNe,YRr)Z]g
+;UI]*qFNDMoUOfpGd
+T<m'`9FN0MB<O#_2"
+d!`nUAFN/rf!,@Hq&
+G6Ld<JFN%5#6Ql\+q
+J-pA$nFN^,W-rPm]g
+
+/OT(\+J05
+`r13[d&m.
+EQGcDgiRO
+
+G#')SHi?r]Ur
+A\d:74";Xj0X
+A_dZ[)";Xj@X
+
+A'9W4A+#2&MYg\28oal$n
+?dJmW?g\+C5ZT/+fp'o=2
+;bi*6;T-g>O`GegYSdE3+
+
+nX]1+8NAg:jh;63TJECH5Y\r +fL4Dpl"
+qQGT':N]d@A-94$b;li ,87Oc'KkU`6ZC
+TXiJASNC?o"cnY4;aB+<5#Vr)A7R8h`ed
+
+#X]UIbC r9"BI?-p1MC&j`1^<T7T
+eMAW-T"4Q;>=-9B<G,"i?EGpY1/1
+_,j@B1>*XJq%B;=Y]5>C9#]<lG`G
+
+C)9FJFjak&,!C$N+C)&G:>^Olo@c].i\Z19G
+?P1F]FbiYA.\?SN>?PA+L;3Q@RkedrjHm'1+
+J4AF?FG>D9QBJ-NaJ49bWiK,8f0$TM;o:gAb
+
+;X'aC.JV.](h4k&1"k%&GB?grJ9G:E)="Y.ekQg
+nX]1+.a!.iW0^P2JdPc2&(>?raq&<V73d[.hPQ?
+grJ9G,b),alZ_8Tq]8<Tn^+C.bdnk@%p]0,H8OC
+
+7TX(F]gc^N?'-YBJ)dRp0dCT1S:C9Q2niYINqVq
+VqQHF2")[Nd&c-UTECpDfC]qn=S]grJ9G-3N?m?
+`G,cFjTW<N;d=S%iZb4YRb>G][^>JM+2"SBNaha
