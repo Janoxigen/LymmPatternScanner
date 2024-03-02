@@ -4,7 +4,11 @@ CYPHERTEXT_LOCATION = "input\CYPHERTEXT.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram 83-Alph StatProgPerm.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram simpleAlph StatProgPerm.txt"
 
-MINIMUM_PATTERN_SIZE=4  # this specifies the minimum amount of Gaps that a pattern consists of.
+PLAINTEXT_LOCATION = "input\PLAINTEXT.txt"
+
+MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.
+ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
+GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?
 
 # This dictionary decides the color-coding for each GapSize:
 GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,

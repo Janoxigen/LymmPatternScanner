@@ -1,6 +1,6 @@
 
 from colorama import Fore, Back, Style
-from typing import Union
+
 
 class LymmPair:
     def __init__(self,index:int,gapsize:int):
@@ -13,25 +13,6 @@ class LymmPair:
     def __repr__(self):
         return self.__str__()
 
-class LymmPattern:
-    def __init__(self,
-                 LymmPairs:list[LymmPair],
-                 messageIDs:tuple[int,int],
-                 offset:int  # The offset of how much the secondMessages LymmPattern is offset to the right. Can only be positive.
-                 ):
-        self.LymmPairs = LymmPairs
-        self.messageIDs = messageIDs
-        self.offset = offset
-
-    def length(self):
-        return len(self.LymmPairs)
-
-    def __str__(self):
-        return f"<LymmPairs:{self.LymmPairs},  firstMessageID={self.messageIDs[0]},  secndMessageID={self.messageIDs[1]},  offset={self.offset}>"
-    def __repr__(self):
-        return self.__str__()
-
-#TODO switch to multiLymmPatterns that need to be created during Patterngathering or the LymmPatterns need to store their GapDB-representation too.
 class multiLymmPattern:
     def __init__(self,
                  LymmPairs:list[LymmPair],
@@ -45,6 +26,60 @@ class multiLymmPattern:
     def messageCount(self):
         return len(self.messageDescrs)
 
+    def print_pattern(self, cyphertext_whole: str,
+                      gapColorDict: dict,
+                      onlyPrintmarkedLines=False,
+                      alignIsomorphs=False):
+        """
+        Prints and marks this Lymm-Pattern-nGroup.
+        """
+        LymmPairList = self.LymmPairs
+        lines = cyphertext_whole.split("\n")
+        # ---- once for every Line involved in the Isomorph: ----
+        for currLineID, currLineOffset in self.messageDescrs:
+            # ---- Print the entire Ciphertext with only that Pattern marked: ----
+            for lineID in range(0, lines.__len__()):
+                currLineStr = lines[lineID]
+
+                hit = lineID == currLineID
+
+                if hit:
+                    resultString = self.__mark_one_Lymm_pattern(currLineStr,
+                                                                LymmPairList,
+                                                                gapColorDict,
+                                                                currLineOffset,
+                                                                alignIsomorphs)
+                    print(resultString)
+                elif not hit:
+                    if not onlyPrintmarkedLines:
+                        print(currLineStr)
+
+    def __mark_one_Lymm_pattern(self,
+                                cypherLine_str: str,
+                                LymmPairList:list[LymmPair],
+                                gapColorDict:dict,
+                                maskOffset:int,
+                                alignIsomorphs:bool)->str:
+        """
+        ATTENTION: This STOPS WORKING properly if you run it twice over a string. That is because the colormarkings themselves are strings.
+        :returns: A marked String using colorama-colorcodes
+        """
+        def mark_letter(listified_string: list, index: int, colorCode: str):
+            listified_string[index] = colorCode + listified_string[index] + Back.RESET
+
+        listified_text = list(cypherLine_str)
+        for pair in LymmPairList:  # for each Gap, mark both of its letters in the respective color
+            leftLetter_pos = pair.index + maskOffset
+            gapSize = pair.gapsize
+            rightLetter_pos = leftLetter_pos + pair.pairOffset
+            colorcode = gapColorDict[gapSize]
+            mark_letter(listified_text, leftLetter_pos, colorcode)
+            mark_letter(listified_text, rightLetter_pos, colorcode)
+        if alignIsomorphs:
+            # we need to cut off the left part if we want to align the Isomorphs.
+            listified_text = listified_text[maskOffset:]
+        return "".join(listified_text)
+
     def __str__(self):
         MessageDescrStrings=[f"(msgID={descr[0]},offset={descr[1]})" for descr in self.messageDescrs]
         return f"<LymmPairs:{self.LymmPairs}, {MessageDescrStrings}>"
@@ -53,24 +88,20 @@ class multiLymmPattern:
 
 class Pattern_scanner:
 
-    # DONE, Works---
     @staticmethod
-    def find_all_Lymm_patterns(cyphertext_whole: str, gapSizes: list[int], verbose=False) -> Union[LymmPattern,list[LymmPattern]]:
+    def find_all_LymmPattern_nGroups(desired_groupsize:int,
+                                     cyphertext_whole: str,
+                                     gapSizes: list[int],
+                                     minimumPatternSize=2,
+                                     verbose=False)->list[multiLymmPattern]:
         """
-        Searches for all Lymm-Patterns that appear at least twice.
-        :param: gapSizes: a list of the Sizes that we want to check
+        Finds all the n-sized Groups of repeating LymmPatterns.
+        :param: gapSizes: a list of the Sizes that we want to check.
         """
-        #############
-        # PSEUDOCODE:
-        # >Overlay the gap-positions of each pair of messages and take
-        #  note if any of those positions overlap.
-        # >Repeat step 1 for each possible offset between messages.
-        # NOTES:
-        # (To prevent duplicate finds, we only check offsets to
-        # messages that are "below" the current message or within
-        # the same message but "to the right".)
-        #############
-
+        if desired_groupsize<2:
+            raise Exception("groupsize of LymmPatternGroups must be at least 2.")
+        if minimumPatternSize<2:
+            raise Exception("PatternSize of LymmPatterns must be at least 2.")
         # -----------------------
         # ----- PREPARATION -----
         # -----------------------
@@ -81,55 +112,135 @@ class Pattern_scanner:
             currDB = Pattern_scanner.__gather_gapDB_of_line(currLine, gapSizes)
             each_lines_GapDB.append(currDB)
 
-        totalPatternCount = 0
         allPatternsList = []
 
-        # -----------------------
-        # ------- SCANNING ------
-        # -----------------------
-        for mainLineID in range(0, cipherLines.__len__()):
-            mainLines_gapDB = each_lines_GapDB[mainLineID]
-            for secondLineID in range(0, cipherLines.__len__()):
-                secondLineLen = cipherLines[mainLineID].__len__()
-                secondLines_gapDB = each_lines_GapDB[secondLineID]
+        # ---------------------------------------
+        # ----- Help-classes and functions -----
+        # ---------------------------------------
+        class primordialNGroup:
+            """
+            This class is used to store the currently gathered Pattern, aswell as the involved Messages and offsets.
+            """
+            def __init__(self,
+                         remainingGaps_DB: list[list[int]],
+                         messageDescrs: list[tuple[int, int]]):
+                self.remainingGaps_DB = remainingGaps_DB
+                self.messageDescrs = messageDescrs
+
+        def overlay_GapDBs(gapDB_A: list[list[int]],
+                           gapDB_B: list[list[int]]
+                           )      ->list[list[int]]:
+            """
+            returns a new GapDB, containing only the gaps that BOTH DBs contained.
+            """
+            resulting_gapDB = []
+            comparelength = min(gapDB_A.__len__(), gapDB_B.__len__())
+            for index in range(0,comparelength):
+                new_GapList = [gapSize for gapSize in gapDB_A[index] if gapSize in gapDB_B[index]]
+                resulting_gapDB.append(new_GapList)
+            return resulting_gapDB
+
+        def count_pairs_in_GapDB(gapDB: list[list[int]])->int:
+            sum = 0
+            for currLetters_GapSizeList in gapDB:
+                sum += len(currLetters_GapSizeList)
+            return sum
+
+        def LymmPairify_GapDB(gapDB: list[list[int]])->list[LymmPair]:
+            resultList = []
+            for index in range(0, len(gapDB)):
+                currLetters_GapSizeList = gapDB[index]
+                for gapSize in currLetters_GapSizeList:
+                    newLymmPair = LymmPair(index, gapsize=gapSize)
+                    resultList.append(newLymmPair)
+            return resultList
+
+        # --------------------------------
+        # ------- SCANNING-function ------
+        # --------------------------------
+        def faLPnG_recursion(kickstarterRecursion=True,
+                             oldGroupSize:int=None,
+                             previous_scanLineID:int=None,
+                             previous_startOffset:int=None,
+                             mainLineID:int=None,
+                             currently_worked_group:primordialNGroup=None):
+            """
+            This function goes over (the rest of) the unchecked other messages/offsets.
+            If it finds another offset where the overlapping Pattern isn't empty, it goes one
+            recursion deeper, unless the desiredGroupSize is already reached.
+            All found Patterns are put into the allPatternsList.
+            """
+            if kickstarterRecursion:
+                for mainLineID in range(0, cipherLines.__len__()):
+                    initial_gapDB = each_lines_GapDB[mainLineID]
+                    initial_messageDescrs = [(mainLineID, 0)]
+                    newNgroup = primordialNGroup(remainingGaps_DB=initial_gapDB,
+                                                 messageDescrs=initial_messageDescrs)
+                    faLPnG_recursion(kickstarterRecursion=False,
+                                     oldGroupSize=1,
+                                     previous_scanLineID=0,
+                                     previous_startOffset=None,  # I had to do this is such a stupid way because otherwise i would sometimes pass a self-comparing startOffset.
+                                     mainLineID=mainLineID,
+                                     currently_worked_group=newNgroup)
+                return
+            # ---- if not KickstarterRecursion: ----
+            newGroupSize = oldGroupSize +1
+            current_remaining_GapDB = currently_worked_group.remainingGaps_DB
+            firstIteration=True
+            for scanLineID in range(previous_scanLineID, cipherLines.__len__()):
+                maxOffset = cipherLines[mainLineID].__len__()
+                secondLines_gapDB = each_lines_GapDB[scanLineID]
 
                 startoffset = 0  # the offset can only be positive, but by swapping the roles of main- and secondLine, we do an "inverted" test.
-                if secondLineID <= mainLineID:
+                if scanLineID <= mainLineID:
                     """
                     if we are comparing it to the line itself, we can only scan whatever
                     is to the "right" of what was already scanned. (to prevent self-finds.)
-                    
+
                     This is also a startoffset-adjustment to prevent duplicate finds of zero-offsets between different messages.
                     """
                     startoffset = 1  # (ergo we don't start at 0-Offset)
 
-                for currOffset in range(startoffset, secondLineLen):
-                    offsetted_gapDB = secondLines_gapDB[currOffset:]  # we slice off every gap before the offset-index.
-                    pattern = Pattern_scanner.__analyze_specific_overlay(mainLines_gapDB, offsetted_gapDB)
-                    totalPatternCount +=1
-                    newLymmPattern = LymmPattern(pattern, messageIDs=(mainLineID, secondLineID), offset=currOffset)
-                    allPatternsList.append(newLymmPattern)
-        if verbose:
-            print(f"checked a total of {totalPatternCount} Offsets for Lymm Patterns.")
-        return allPatternsList
+                if firstIteration:
+                    if previous_startOffset is not None:
+                        startoffset=previous_startOffset
+                    # Note: if it is None, then this is the recursion directly under the kickstarterRecursion,
+                    #   which means that we can choose the initial_startOffset on our own.
 
-    # DONE, Works---
-    @staticmethod
-    def __analyze_specific_overlay(first_gapDB: list, second_gapDB: list) -> list[LymmPair]:
-        """
-        "Overlays" the two given gap-DBs and returns a list of all the overlapping Gaps.
-        :returns: LIST of Tuples like this:  [(position, gapSize)]
-        """
-        resultList = []
-        comparelength = min(first_gapDB.__len__(), second_gapDB.__len__())
-        for index in range(0, comparelength):  # for all indexes...
-            # ...check which of the first DBs gaps at that index are also in the second DB at this index:
-            toCheck_gapSizes = first_gapDB[index]
-            for size in toCheck_gapSizes:
-                if size in second_gapDB[index]:
-                    newLymmPair = LymmPair(index, gapsize=size)
-                    resultList.append(newLymmPair)
-        return resultList
+                for currOffset in range(startoffset, maxOffset):
+                    if firstIteration:
+                        firstIteration = False
+                        continue  # we need to skip this iteration because it is the one from which we were called.
+
+                    offsetted_gapDB = secondLines_gapDB[currOffset:]  # we slice off every gap before the offset-index.
+                    overlapped_GapDB = overlay_GapDBs(current_remaining_GapDB, offsetted_gapDB)
+                    pairCount = count_pairs_in_GapDB(overlapped_GapDB)
+                    if pairCount <minimumPatternSize:
+                        continue  # skip all patterns with not enough LymmPairs.
+
+                    newMessageDescrs = currently_worked_group.messageDescrs + [(scanLineID,currOffset)]
+                    # ---- if group NOT finished, recurse: ----
+                    if newGroupSize <desired_groupsize:
+                        newNgroup = primordialNGroup(remainingGaps_DB=overlapped_GapDB, messageDescrs=newMessageDescrs)
+                        faLPnG_recursion(kickstarterRecursion=False,
+                                         oldGroupSize=newGroupSize,
+                                         previous_scanLineID=scanLineID,
+                                         previous_startOffset=currOffset,
+                                         mainLineID=mainLineID,
+                                         currently_worked_group=newNgroup)
+                    # ---- if group YES finished, Lymmify it and store it as a success: ----
+                    else:
+                        pattern = LymmPairify_GapDB(overlapped_GapDB)
+                        newLymmPattern = multiLymmPattern(pattern, messageDescrs=newMessageDescrs)
+                        allPatternsList.append(newLymmPattern)
+
+        # --------------------------------
+        # --------- RECURSION-call -------
+        # --------------------------------
+        faLPnG_recursion(kickstarterRecursion=True)
+        if verbose:
+            print(f"found a total of {len(allPatternsList)} nGroups of matching Lymm Patterns.")
+        return allPatternsList
 
     # DONE, Works---
     @staticmethod
@@ -150,64 +261,6 @@ class Pattern_scanner:
                         currPossesGapList.append(gapSize)
             resultList.append(currPossesGapList)
         return resultList
-
-    # DONE, Works---
-    @staticmethod
-    def print_Lymm_pattern(cyphertext_whole: str, targetPattern: LymmPattern, gapColorDict: dict, singlePrint=True, onlyPrintmarkedLines=False):
-        """
-        Prints and marks a singular Lymm-Pattern-Pair.
-        """
-        mainMessageID = targetPattern.messageIDs[0]
-        secondMessageID = targetPattern.messageIDs[1]
-        secondMessageOffset = targetPattern.offset
-        lines = cyphertext_whole.split("\n")
-        # ---- once for every Line involved in the Isomorph: ----
-        for currPatternID in [1,2]:
-            # ---- Print the entire Ciphertext with only that Pattern marked: ----
-            for lineID in range(0, lines.__len__()):
-                currLineStr = lines[lineID]
-
-                listified = list(currLineStr)
-                firstHit = lineID == mainMessageID
-                secndHit = lineID == secondMessageID
-
-                if currPatternID == 1 and firstHit:
-                    Pattern_scanner.__mark_one_Lymm_pattern(listified, targetPattern, gapColorDict, maskOffset=0)
-                    resultString = "".join(listified)
-                    print(resultString)
-
-                if currPatternID == 2 and secndHit:
-                    Pattern_scanner.__mark_one_Lymm_pattern(listified, targetPattern, gapColorDict,maskOffset=secondMessageOffset)
-                    resultString = "".join(listified)
-                    print(resultString)
-
-                if not (firstHit or secndHit):
-                    if not onlyPrintmarkedLines:
-                        print(currLineStr)
-
-    # DONE, Works---
-    @staticmethod
-    def __mark_one_Lymm_pattern(listified_text: list, targetPattern: LymmPattern, gapColorDict: dict, maskOffset: int):
-        """
-        Goes over the provided listified String and adds coloring to all the characters that are in a Gap
-        in the provided pattern.
-
-        NOTE:  The listified text needs to match the index-Notation of the pattern:
-                If the indexes referr to the position within the entire ciphertext, pass the entire ciphertext.
-                If the indexes referr to the position within the SPECIFIC LINE, pass that specific line only.
-        """
-
-        def mark_letter(listified_string: list, index: int, colorCode: str):
-            listified_string[index] = colorCode + listified_string[index] + Back.RESET
-
-        pattern = targetPattern.LymmPairs
-        for pair in pattern:  # for each Gap, mark both of its letters in the respective color
-            leftLetter_pos = pair.index + maskOffset
-            gapSize = pair.gapsize
-            rightLetter_pos = leftLetter_pos + pair.pairOffset
-            colorcode = gapColorDict[gapSize]
-            mark_letter(listified_text, leftLetter_pos, colorcode)
-            mark_letter(listified_text, rightLetter_pos, colorcode)
 
     # DONE, Works---
     @staticmethod
@@ -269,12 +322,9 @@ class Pattern_scanner:
     @staticmethod
     def __mark_one_Lines_GapDB(cipherLine: str, thisLines_gapDB:list[list[int]], gapColorDict: dict, maskOffset: int)->str:
         """
-        Goes over the provided listified String and adds coloring to all the characters that are in a Gap
+        Goes over the provided String and adds coloring to all the characters that are in a Gap
         in the provided gapDB.
-
-        NOTE:  The listified text needs to match the index-Notation of the pattern:
-                If the indexes referr to the position within the entire ciphertext, pass the entire ciphertext.
-                If the indexes referr to the position within the SPECIFIC LINE, pass that specific line only.
+        UNUSED as of now, but might be usefull someday to mark Isomorphs when you only have gapDBs at your disposition.
         """
 
         def mark_letter(listified_string: list, index: int, colorCode: str):
@@ -294,11 +344,11 @@ class Pattern_scanner:
     @staticmethod
     def divide_patterns_into_unbroken_clusters(cyphertext_whole: str,
                                                gapSizes: list[int],
-                                               PatternsList:list[LymmPattern],
+                                               PatternsList:list[multiLymmPattern],
                                                minClusterSize=2,
                                                gapColorDict: dict=None,
                                                verbose=False
-                                               )->list[LymmPattern]:
+                                               )->list[multiLymmPattern]:
         """
         (doesn't actually edit the original list nor the Patterns within.)
 
@@ -313,45 +363,37 @@ class Pattern_scanner:
             currDB = Pattern_scanner.__gather_gapDB_of_line(currLine, gapSizes)
             each_lines_GapDB.append(currDB)
 
-        def generate_breaking_gapDB(gapDB_A:list[list[int]], gapDB_B:list[list[int]], offset:int)->list[list[int]]:
+        def generate_breaking_gapDB(messageDescrs: list[tuple[int,int]],
+                                    each_lines_GapDB: list[list[list[int]]]
+                                    )->list[list[int]]:
             """
             Returns a list of lists.
-            For every position (accounting for offset), a list of all the gaps that aren't in BOTH gapDBs at that position.
+            For every position (accounting for offset), a list of all the gaps that aren't in ALL gapDBs at that position.
             (Assumes that the offset is possible with those gapDBs)
+            Note: The resulting list is as big as the offsets and DBsizes allow.
+
+            :param: messageDescrs: for every involved Message we have an (index,offset) Tuple.  (the first offset is always 0)
+            :param: each_lines_GapDB: For every line one List that is: For every Letter a List of Gapsizes at that Index.
             """
             resultDB = []
-            maxScanIndex = min(len(gapDB_A),  len(gapDB_B)-offset)
-            overall_onlyA=[]
-            overall_onlyB=[]
-            for index in range(maxScanIndex):
-                gapSizeList_A = gapDB_A[index]
-                gapSizeList_B = gapDB_B[index+offset]
-                onlyA = [gapSize for gapSize in gapSizeList_A if gapSize not in gapSizeList_B]
-                onlyB = [gapSize for gapSize in gapSizeList_B if gapSize not in gapSizeList_A]
-                allUnique = onlyA.copy()
-
-                overall_onlyA.append(onlyA)
-                overall_onlyB.append(onlyB)
-
-                allUnique.extend(onlyB)
-                resultDB.append(allUnique)
-
-            if verbose:
-                if superVerbose:
-                    firstMessageID = pattern.messageIDs[0]
-                    secndMessageID = pattern.messageIDs[1]
-                    firstMessage_marked = Pattern_scanner.__mark_one_Lines_GapDB(cipherLine=cipherLines[firstMessageID],
-                                                                                 thisLines_gapDB=overall_onlyA,
-                                                                                 gapColorDict=gapColorDict,
-                                                                                 maskOffset=0)
-                    secndMessage_marked = Pattern_scanner.__mark_one_Lines_GapDB(cipherLine=cipherLines[secndMessageID],
-                                                                                 thisLines_gapDB=overall_onlyB,
-                                                                                 gapColorDict=gapColorDict,
-                                                                                 maskOffset=0)
-                    print("------------------ breakPairs start ------------------")
-                    print(firstMessage_marked)
-                    print(secndMessage_marked)
-                    print("////////////////// breakPairs end //////////////////")
+            # ---- fetch all the gapDBs ----
+            allGapDBs = []
+            for lineID,offset in messageDescrs:
+                offsetted_gapDB = each_lines_GapDB[lineID][offset:]
+                allGapDBs.append(offsetted_gapDB)
+            allGapDBsizes = [len(DB) for DB in allGapDBs]
+            # ---- find all the breakingGaps of each index----
+            maxScanIndex = min(allGapDBsizes)
+            for scanIndex in range(maxScanIndex):
+                allBreakersDB_ofthisIndex = set() #using set for easy duplicatePrevention.
+                for mainDB_ID, mainGapDB in enumerate(allGapDBs):
+                    mainGapSizeList = mainGapDB[scanIndex]
+                    for secndDB_ID, secndGapDB in enumerate(allGapDBs):
+                        if secndDB_ID != mainDB_ID:
+                            secndGapSizeList = secndGapDB[scanIndex]
+                            newFoundBreakers = [gapSize for gapSize in mainGapSizeList if gapSize not in secndGapSizeList]
+                            allBreakersDB_ofthisIndex.update(newFoundBreakers)  # add all newFoundBreakers to the allBreakers.
+                resultDB.append(list(allBreakersDB_ofthisIndex))
 
             return resultDB
 
@@ -359,44 +401,56 @@ class Pattern_scanner:
             """
             For every cluster, this creates a "left" and "right" side cluster based on the breakerPair.
             Btw, this (as a sideffect) filters out all LymmPairs that are fully encasing the breakerPair.
-            (drops all subClusters where the other sibling has the same Pairs (or even more))
+            (drops all subClusters that are already fully contained within another cluster.)
             (only keeps nonEmpty clusters that are >=minClusterSize.)
             """
             leftLimit  = breakerPair.index
             rightLimit = breakerPair.index+breakerPair.pairOffset
-            resultList=[]
+            splittedClusters_List=[]
+            # ---- split every cluster: ----
             for cluster in clustersList:
                 leftCluster =[pair for pair in cluster if pair.index+pair.pairOffset <rightLimit]
                 rightCluster=[pair for pair in cluster if pair.index                 >leftLimit ]
+                if len(leftCluster)  >=minClusterSize: splittedClusters_List.append(leftCluster)
+                if len(rightCluster) >=minClusterSize: splittedClusters_List.append(rightCluster)
 
-                lefthasUnique=False
-                for pair in leftCluster:
-                    if pair not in rightCluster:
-                        lefthasUnique=True
+            # ---- only keep clusters that are not fully contained within another cluster: ----
+            resultList=[]
+            for AnkerCluster in splittedClusters_List:
+
+                ankerIsUnique=True
+                for currCluster in resultList:
+                    foundUnique=False
+                    for pair in AnkerCluster:
+                        if pair not in currCluster:
+                            foundUnique=True
+                            break
+                    if not foundUnique:
+                        ankerIsUnique=False
                         break
-                righthasUnique=False
-                for pair in rightCluster:
-                    if pair not in leftCluster:
-                        righthasUnique=True
-                        break
 
-                if lefthasUnique:
-                    resultList.append(leftCluster)
-                if righthasUnique:
-                    resultList.append(rightCluster)
-                if (not lefthasUnique) and (not righthasUnique):  # (special case, for when the clusters are totally equal)
-                    resultList.append(leftCluster)
-
-            resultList = [cluster for cluster in resultList if len(cluster)>=minClusterSize]  # only keep nonEmpty clusters.
+                if ankerIsUnique:
+                    newResultList = []
+                    newResultList.append(AnkerCluster)
+                    for currCluster in resultList:
+                        currIsUnique = False
+                        for pair in currCluster:
+                            if pair not in AnkerCluster:
+                                currIsUnique = True
+                                break
+                        if currIsUnique:
+                            newResultList.append(currCluster)
+                    resultList=newResultList
             return resultList
 
-        def convert_gapDB_to_LymmPairList(lines_breakingGapDB:list[list[int]])->list[LymmPair]:
+        def convert_gapDB_to_LymmPairList(gapDB:list[list[int]])->list[LymmPair]:
             """
+            Note: The resulting
             :param: lines_breakingGapDB: a gapDB of one Line, each index contains the gapSizes of that index.
             """
             resultList:list[LymmPair]=[]
-            for i in range(len(lines_breakingGapDB)):
-                indexes_gapSizeList = lines_breakingGapDB[i]
+            for i in range(len(gapDB)):
+                indexes_gapSizeList = gapDB[i]
                 for gapSize in indexes_gapSizeList:
                     newPair = LymmPair(i, gapSize)
                     resultList.append(newPair)
@@ -409,25 +463,11 @@ class Pattern_scanner:
             if pattern.length()==0:
                 continue
             if verbose:
-                if      ((pattern.messageIDs[0]==5 and pattern.messageIDs[1]==4 and pattern.offset==1) or
-                         (pattern.messageIDs[0]==3 and pattern.messageIDs[1]==4 and pattern.offset==6) or
-                         (pattern.messageIDs[0]==3 and pattern.messageIDs[1]==5 and pattern.offset==5)):
-                    print(f'{Fore.LIGHTBLACK_EX}looking at Pattern: {pattern}  GAPCOUNT:{pattern.length()}{Fore.RESET}')
-                    Pattern_scanner.print_Lymm_pattern(cyphertext_whole,
-                                                       targetPattern=pattern,
-                                                       gapColorDict=gapColorDict,
-                                                       onlyPrintmarkedLines=True,
-                                                       singlePrint=False)
-                    superVerbose=True
-                else:
-                    superVerbose=False
+                print(f'{Fore.LIGHTBLACK_EX}looking at Pattern: {pattern}  GAPCOUNT:{pattern.length()}{Fore.RESET}')
+                pattern.print_pattern(cyphertext_whole, gapColorDict, onlyPrintmarkedLines=True, alignIsomorphs=False)
 
             PairList = pattern.LymmPairs
-            firstMessageID = pattern.messageIDs[0]
-            secndMessageID = pattern.messageIDs[1]
-            gapDB_A = each_lines_GapDB[firstMessageID]
-            gapDB_B = each_lines_GapDB[secndMessageID]
-            breakingGapDB = generate_breaking_gapDB(gapDB_A, gapDB_B, pattern.offset)
+            breakingGapDB = generate_breaking_gapDB(messageDescrs=pattern.messageDescrs, each_lines_GapDB=each_lines_GapDB)
             breakingGapDB_Lymmed = convert_gapDB_to_LymmPairList(breakingGapDB)
 
             clustersList = [PairList]  # the initial cluster is just all Pairs together.
@@ -435,23 +475,18 @@ class Pattern_scanner:
                 clustersList = split_clusters_using_Breakerpair(clustersList, breakerPair)
 
             if verbose:
-                newPatterns:list[LymmPattern]=[]
+                newPatterns:list[multiLymmPattern]=[]
             for cluster in clustersList:
                 cluster = sorted(cluster,key=lambda pair: pair.index)  # sort the list of Lymmpairs, just for visual niceness.
-                newPattern=LymmPattern(cluster, pattern.messageIDs, pattern.offset)
+                newPattern=multiLymmPattern(LymmPairs=cluster, messageDescrs=pattern.messageDescrs)
                 resultList.append(newPattern)
                 if verbose:
                     newPatterns.append(newPattern)
 
             if verbose:
-                if superVerbose:
-                    print(f"split it into these {len(newPatterns)} unbroken clusters:---------------------------------------------------")
-                    for clusterPattern in newPatterns:
-                        Pattern_scanner.print_Lymm_pattern(cyphertext_whole,
-                                                           targetPattern=clusterPattern,
-                                                           gapColorDict=gapColorDict,
-                                                           onlyPrintmarkedLines=True,
-                                                           singlePrint=False)
-                        print("--")
+                print(f"split it into these {len(newPatterns)} unbroken clusters:---------------------------------------------------")
+                for clusterPattern in newPatterns:
+                    clusterPattern.print_pattern(cyphertext_whole,gapColorDict,onlyPrintmarkedLines=True,alignIsomorphs=False)
+                    print("--")
 
         return resultList
