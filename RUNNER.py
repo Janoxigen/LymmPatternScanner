@@ -130,8 +130,11 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
     # chosenText=plaintext  # by sneakily using the plaintext instead of the ciphertext, we can visualize where the LymmPatterns would be placed on the plaintext.
     for pattern in allPatternsList:
         print(f'{Fore.RED}GROUPSIZE= {pattern.groupSize()} {Fore.LIGHTBLACK_EX}{pattern}  GAPCOUNT:{pattern.length()}{Fore.RESET}')
+        #The following two Flags DO NOT WORK if [allIntoOneCiphertext] is enabled:
+        #   onlyPrintmarkedLines
+        #   alignIsomorphs
         pattern.print_pattern(chosenText, GAPCOLORS, onlyPrintmarkedLines=onlyPrintmarkedLines,
-                              alignIsomorphs=ALIGN_ISOMORPHS)
+                              alignIsomorphs=ALIGN_ISOMORPHS, allIntoOneCiphertext=PRINT_ALL_ISOMORPHS_INTO_ONE_CIPHERTEXT)
 
 
 from SETTINGS import *

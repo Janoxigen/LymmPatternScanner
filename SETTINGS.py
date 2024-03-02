@@ -10,6 +10,12 @@ MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a patte
 ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
 MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?     (don't set <2 because.... if the Pattern only appears once then why even care about it?)
 
+# If this is TRUE:
+PRINT_ALL_ISOMORPHS_INTO_ONE_CIPHERTEXT=True
+# , it will print every Isomorph-Group into one Ciphertext EACH.
+# Note that this overrides settings like [align_isomorphs] or [onlyPrintMarkedLines].
+
+
 # This dictionary decides the color-coding for each GapSize:
 GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
              1: Back.LIGHTGREEN_EX,
@@ -48,5 +54,5 @@ GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
              }
 
 # ---- DEPRECATED ---
-# (not realy deprecated but useless since the "smart"-Version doesn't use it.)
+# (not really deprecated but useless since the "smart"-Version doesn't use it.)
 GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?

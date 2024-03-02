@@ -31,30 +31,43 @@ class multiLymmPattern:
     def print_pattern(self, cyphertext_whole: str,
                       gapColorDict: dict,
                       onlyPrintmarkedLines=False,
-                      alignIsomorphs=False):
+                      alignIsomorphs=False,
+                      allIntoOneCiphertext=False):
         """
         Prints and marks this Lymm-Pattern-nGroup.
+        These two Flags DO NOT WORK if [allIntoOneCiphertext] is enabled:
+            onlyPrintmarkedLines
+            alignIsomorphs
+
+        :param: allIntoOneCiphertext: (takes priority over aligning and single-line-printing) if TRUE, it will print all Patterns into one single ciphertext, potentially overlapping.
+        :param: alignIsomorphs: if TRUE, all patterns are perfectly below each other, but [allIntoOneCiphertext] takes priority and removes this flag.
+        :param: onlyPrintmarkedLines: if TRUE, it only prints the line of the pattern for each pattern. but [allIntoOneCiphertext] takes priority and removes this flag.
         """
         LymmPairList = self.LymmPairs
         lines = cyphertext_whole.split("\n")
-        # ---- once for every Line involved in the Isomorph: ----
-        for currLineID, currLineOffset in self.messageDescrs:
-            # ---- Print the entire Ciphertext with only that Pattern marked: ----
+        if not allIntoOneCiphertext:
+            # ---- once for every Line involved in the Isomorph: ----
+            for currLineID, currLineOffset in self.messageDescrs:
+                # ---- Print the entire Ciphertext with only that Pattern marked: ----
+                for lineID in range(0, lines.__len__()):
+                    currLineStr = lines[lineID]
+                    if lineID==currLineID:
+                        resultString = self.__mark_one_Lymm_pattern(currLineStr,
+                                                                    LymmPairList,
+                                                                    gapColorDict,
+                                                                    currLineOffset,
+                                                                    alignIsomorphs)
+                        print(resultString)
+                    else:
+                        if not onlyPrintmarkedLines:
+                            print(currLineStr)
+        if allIntoOneCiphertext:
             for lineID in range(0, lines.__len__()):
-                currLineStr = lines[lineID]
-
-                hit = lineID == currLineID
-
-                if hit:
-                    resultString = self.__mark_one_Lymm_pattern(currLineStr,
-                                                                LymmPairList,
-                                                                gapColorDict,
-                                                                currLineOffset,
-                                                                alignIsomorphs)
-                    print(resultString)
-                elif not hit:
-                    if not onlyPrintmarkedLines:
-                        print(currLineStr)
+                listified = list(lines[lineID])
+                for currLineID, currLineOffset in self.messageDescrs:
+                    if lineID==currLineID:
+                        self.__mark_one_Lymm_pattern_listified(listified, self.LymmPairs, gapColorDict, currLineOffset)
+                print("".join(listified))
 
     def samePattern(self, otherPattern)->bool:
         """
@@ -81,15 +94,16 @@ class multiLymmPattern:
 
     def __mark_one_Lymm_pattern(self,
                                 cypherLine_str: str,
-                                LymmPairList:list[LymmPair],
-                                gapColorDict:dict,
-                                maskOffset:int,
-                                alignIsomorphs:bool)->str:
+                                LymmPairList: list[LymmPair],
+                                gapColorDict: dict,
+                                maskOffset: int,
+                                alignIsomorphs: bool) -> str:
         """
         ATTENTION: This STOPS WORKING properly if you run it twice over a string. That is because the colormarkings themselves are strings.
         :returns: A marked String using colorama-colorcodes
         """
-        def mark_letter(listified_string: list, index: int, colorCode: str):
+
+        def mark_letter(listified_string: list[str], index: int, colorCode: str):
             listified_string[index] = colorCode + listified_string[index] + Back.RESET
 
         listified_text = list(cypherLine_str)
@@ -104,6 +118,27 @@ class multiLymmPattern:
             # we need to cut off the left part if we want to align the Isomorphs.
             listified_text = listified_text[maskOffset:]
         return "".join(listified_text)
+
+    def __mark_one_Lymm_pattern_listified(self,
+                                          listified_text: list[str],
+                                          LymmPairList:list[LymmPair],
+                                          gapColorDict:dict,
+                                          maskOffset:int):
+        """
+        MODIFIES the listified_text by adding colorama-colorcodes to the marked indexes.
+        This is useful because it allows multiple marking-passes over the same ciphertextLine, as long as
+        you didn't convert it back to a string yet.
+        """
+        def mark_letter(listified_string: list[str], index: int, colorCode: str):
+            listified_string[index] = colorCode + listified_string[index] + Back.RESET
+
+        for pair in LymmPairList:  # for each Gap, mark both of its letters in the respective color
+            leftLetter_pos = pair.index + maskOffset
+            gapSize = pair.gapsize
+            rightLetter_pos = leftLetter_pos + pair.pairOffset
+            colorcode = gapColorDict[gapSize]
+            mark_letter(listified_text, leftLetter_pos, colorcode)
+            mark_letter(listified_text, rightLetter_pos, colorcode)
 
     def __str__(self):
         MessageDescrStrings=[f"(msgID={descr[0]},offset={descr[1]})" for descr in self.messageDescrs]
