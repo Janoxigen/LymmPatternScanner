@@ -23,6 +23,8 @@ class multiLymmPattern:
 
     def length(self):
         return len(self.LymmPairs)
+    def groupSize(self):
+        return len(self.messageDescrs)
     def messageCount(self):
         return len(self.messageDescrs)
 
@@ -53,6 +55,29 @@ class multiLymmPattern:
                 elif not hit:
                     if not onlyPrintmarkedLines:
                         print(currLineStr)
+
+    def samePattern(self, otherPattern)->bool:
+        """
+        Checks if the PATTERNs of the two LymmPatterns are EXACTLY the same, meaning the PLACE doesn't matter, as long as the pattern is the same.
+        Does NOT assume that the LymmPair-Lists are sorted, does so itself.
+        :returns: TRUE if same Pattern.
+        """
+        otherPattern:multiLymmPattern
+        # --- quick pre-check ---
+        if self.length() != otherPattern.length():
+            return False
+
+        # --- compare ALL of them ---
+        sorted_own = sorted(self.LymmPairs        , key=lambda pair: pair.index)
+        sorted_new = sorted(otherPattern.LymmPairs, key=lambda pair: pair.index)
+        shift_own = sorted_own[0].index
+        shift_new = sorted_new[0].index
+        ownPairs_zeroed_tupled = [(pair.index-shift_own,pair.gapsize) for pair in sorted_own]
+        newPairs_zeroed_tupled = [(pair.index-shift_new,pair.gapsize) for pair in sorted_new]
+        for index in range(self.length()):
+            if ownPairs_zeroed_tupled[index] != newPairs_zeroed_tupled[index]:
+                return False
+        return True
 
     def __mark_one_Lymm_pattern(self,
                                 cypherLine_str: str,

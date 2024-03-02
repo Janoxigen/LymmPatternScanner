@@ -8,7 +8,7 @@ PLAINTEXT_LOCATION = "input\PLAINTEXT.txt"
 
 MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.
 ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
-GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?
+MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?
 
 # This dictionary decides the color-coding for each GapSize:
 GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
@@ -37,3 +37,7 @@ GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
              23:Back.LIGHTBLACK_EX,
              24:Back.LIGHTBLACK_EX,
              }
+
+# ---- DEPRECATED ---
+# (not realy deprecated but useless since the "smart"-Version doesn't use it.)
+GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?
