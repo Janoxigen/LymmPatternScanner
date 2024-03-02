@@ -104,13 +104,12 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
             break
         print(f"found {len(biggerPatternsList)} Patterns of Groupsize={groupSize}. diving into unbroken clusters...")
         biggerPatternsList = Pattern_scanner.divide_patterns_into_unbroken_clusters(cyphertext,
-                                                                                   gapSizes=list(GAPCOLORS.keys()),
                                                                                    PatternsList=biggerPatternsList,
                                                                                    minClusterSize=MINIMUM_PATTERN_SIZE,
                                                                                    gapColorDict=GAPCOLORS,
                                                                                    verbose=False)
 
-        print(f"done! found {len(biggerPatternsList)} satisfying Patterns of Groupsize={groupSize}.")
+        print(f"done! found {Fore.BLUE}{len(biggerPatternsList)}{Fore.RESET} satisfying Patterns of {Fore.BLUE}Groupsize={groupSize}{Fore.RESET}.")
         print(f"Searching all {len(allPatternsList)} Patterns for redundancy against current Groupsize...")
         newAllPatternsList=biggerPatternsList.copy()
         oldPattern: multiLymmPattern

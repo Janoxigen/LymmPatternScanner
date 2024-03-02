@@ -6,9 +6,9 @@ CYPHERTEXT_LOCATION = "input\CYPHERTEXT.txt"
 
 PLAINTEXT_LOCATION = "input\PLAINTEXT.txt"
 
-MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.
+MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.  (don't set <2 because.... that's not even a Pattern bro)
 ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
-MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?
+MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?     (don't set <2 because.... if the Pattern only appears once then why even care about it?)
 
 # This dictionary decides the color-coding for each GapSize:
 GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
@@ -36,6 +36,15 @@ GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
              22:Back.LIGHTBLACK_EX,
              23:Back.LIGHTBLACK_EX,
              24:Back.LIGHTBLACK_EX,
+             25: Back.LIGHTBLACK_EX,
+             26: Back.LIGHTBLACK_EX,
+             27: Back.LIGHTBLACK_EX,
+             28: Back.LIGHTBLACK_EX,
+             29: Back.LIGHTBLACK_EX,
+             31: Back.LIGHTBLACK_EX,
+             32: Back.LIGHTBLACK_EX,
+             33: Back.LIGHTBLACK_EX,
+             34: Back.LIGHTBLACK_EX,
              }
 
 # ---- DEPRECATED ---

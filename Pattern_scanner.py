@@ -269,8 +269,10 @@ class Pattern_scanner:
 
     # DONE, Works---
     @staticmethod
-    def __gather_gapDB_of_line(line: str, gapSizes: list[int]) -> list[list[int]]:
+    def __gather_gapDB_of_line(line: str, gapSizes: list[int], unlimitedMode=False) -> list[list[int]]:
         """
+        :param: gapSizes: ONLY those gapSizes will be checked.
+        :param: unlimitedMode: if TRUE, ALL gapSizes will be checked.
         :returns: a LIST, that contains a List of gapSizes at each Positions index
         """
         textlen = line.__len__()
@@ -278,11 +280,15 @@ class Pattern_scanner:
         for position in range(0, textlen):  # for each letter of the Text...
             currLetter = line[position]
             currPossesGapList = []
-            for gapSize in gapSizes:
+            toCheckSizes = gapSizes
+            if unlimitedMode is True:
+                remainingLength = textlen-position
+                toCheckSizes=range(0, remainingLength)
+            for gapSize in toCheckSizes:
                 gapOffset = gapSize + 1
-                if position+gapOffset < line.__len__(): #  if the gap exists looking forward...
+                if position+gapOffset < line.__len__(): #  (just to make sure that the remaining text is even long enough for that gapsize...)
                     secondLetter = line[position+gapOffset]
-                    if currLetter == secondLetter:
+                    if currLetter == secondLetter:  #  if there indeed is a letter at that position...
                         currPossesGapList.append(gapSize)
             resultList.append(currPossesGapList)
         return resultList
@@ -368,7 +374,6 @@ class Pattern_scanner:
     # DONE, Works---
     @staticmethod
     def divide_patterns_into_unbroken_clusters(cyphertext_whole: str,
-                                               gapSizes: list[int],
                                                PatternsList:list[multiLymmPattern],
                                                minClusterSize=2,
                                                gapColorDict: dict=None,
@@ -380,12 +385,13 @@ class Pattern_scanner:
         Goes over all LymmPatterns and if there is any patternbreaking LymmPair, the Patterns is split into unbroken clusters.
         Also removes any LymmPairs that fully contain a patternbreaking LymmPair.
         """
-        # ----- prepare the GapDBs -----
         cipherLines = cyphertext_whole.split("\n")
+        # ----- prepare the GapDBs -----
         each_lines_GapDB = []  # this will be one entry for each Line-ID, ergo an entry is a list, mapping  position->Gaps
         for lineID in range(0, cipherLines.__len__()):
             currLine = cipherLines[lineID]
-            currDB = Pattern_scanner.__gather_gapDB_of_line(currLine, gapSizes)
+            #(this time, they will be used only for the breakerDB, meaning that i need to check ALL gapsizes)
+            currDB = Pattern_scanner.__gather_gapDB_of_line(currLine, gapSizes=None, unlimitedMode=True)  #Note: gapSizes is set to None because it is unlimitedMode anyways.
             each_lines_GapDB.append(currDB)
 
         def generate_breaking_gapDB(messageDescrs: list[tuple[int,int]],
