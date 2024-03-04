@@ -55,4 +55,4 @@ GAPCOLORS = {0: Back.LIGHTMAGENTA_EX,
 
 # ---- DEPRECATED ---
 # (not really deprecated but useless since the "smart"-Version doesn't use it.)
-GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?
+#GROUPSIZE=3             # how many Isomorphs are in each IsomorphGroup.  tuples? triples? quadruples?

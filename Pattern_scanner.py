@@ -153,6 +153,7 @@ class Pattern_scanner:
                                      cyphertext_whole: str,
                                      gapSizes: list[int],
                                      minimumPatternSize=2,
+                                     previous_LymmPatterns:list[multiLymmPattern]=None,#TODO implement a seeded Kickstarter-function.
                                      verbose=False)->list[multiLymmPattern]:
         """
         Finds all the n-sized Groups of repeating LymmPatterns.
@@ -294,10 +295,45 @@ class Pattern_scanner:
                         newLymmPattern = multiLymmPattern(pattern, messageDescrs=newMessageDescrs)
                         allPatternsList.append(newLymmPattern)
 
+        def alternative_kickstarter(seedPattern: multiLymmPattern):#TODO test
+            """
+            The user can supply an already computed multiLymmPattern and this function will continue the
+            recursion-search by figuring what the state was when the given LymmPattern was found.
+            """
+            # --- deduce the state when the seedPattern was found. ---
+            mainLineID      = seedPattern.messageDescrs[0][0]   # the first Tuple is for the mainLine, so we take the first digit of that Tuple for the ID.
+            last_scanLineID = seedPattern.messageDescrs[-1][0]  # the last Tuple is for the line where the seedPattern was found.
+            last_Offset     = seedPattern.messageDescrs[-1][1]  # the last Tuple is for the line where the seedPattern was found.
+            patternSize = seedPattern.groupSize()
+
+            # --- recreate the gapDB ---
+            mainLineLength = len(cipherLines[mainLineID])
+            recreated_gapDB: list[list[int]]= []
+            for _ in range(mainLineLength):
+                recreated_gapDB.append([])
+            for pair in seedPattern.LymmPairs:
+                recreated_gapDB[pair.index].append(pair.gapsize)
+
+            # --- kickstart the recursion. ---
+            newNgroup = primordialNGroup(remainingGaps_DB=recreated_gapDB,
+                                         messageDescrs=seedPattern.messageDescrs)
+            faLPnG_recursion(kickstarterRecursion=False,
+                             oldGroupSize=patternSize,
+                             previous_scanLineID=last_scanLineID,
+                             previous_startOffset=last_Offset,
+                             mainLineID=mainLineID,
+                             currently_worked_group=newNgroup)
+
+
         # --------------------------------
         # --------- RECURSION-call -------
         # --------------------------------
-        faLPnG_recursion(kickstarterRecursion=True)
+        if previous_LymmPatterns is None:
+            faLPnG_recursion(kickstarterRecursion=True)
+        elif previous_LymmPatterns is not None:
+            for currSeed in previous_LymmPatterns:
+                alternative_kickstarter(currSeed)
+
         if verbose:
             print(f"found a total of {len(allPatternsList)} nGroups of matching Lymm Patterns.")
         return allPatternsList

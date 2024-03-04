@@ -92,16 +92,14 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
 
     allPatternsList = []
     groupSize=MINIMUM_GROUPSIZE
+    previous_LymmPatterns=None
     while True:
-        #TODO improve the Algorithm, so that it uses the previous biggerPatternsList as a basis to search faster.
         biggerPatternsList = Pattern_scanner.find_all_LymmPattern_nGroups(desired_groupsize=groupSize,
-                                                                       cyphertext_whole=cyphertext,
-                                                                       gapSizes=list(GAPCOLORS.keys()),
-                                                                       minimumPatternSize=MINIMUM_PATTERN_SIZE,
-                                                                       verbose=False)
-        if len(biggerPatternsList) <=0:
-            print(f"NO Groups of size {groupSize} found, finishing scan.")
-            break
+                                                                          cyphertext_whole=cyphertext,
+                                                                          gapSizes=list(GAPCOLORS.keys()),
+                                                                          minimumPatternSize=MINIMUM_PATTERN_SIZE,
+                                                                          previous_LymmPatterns=previous_LymmPatterns,
+                                                                          verbose=False)
         print(f"found {len(biggerPatternsList)} Patterns of Groupsize={groupSize}. diving into unbroken clusters...")
         biggerPatternsList = Pattern_scanner.divide_patterns_into_unbroken_clusters(cyphertext,
                                                                                    PatternsList=biggerPatternsList,
@@ -110,7 +108,10 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
                                                                                    verbose=False)
 
         print(f"done! found {Fore.BLUE}{len(biggerPatternsList)}{Fore.RESET} satisfying Patterns of {Fore.BLUE}Groupsize={groupSize}{Fore.RESET}.")
-        print(f"Searching all {len(allPatternsList)} Patterns for redundancy against current Groupsize...")
+        if len(biggerPatternsList) <=0:
+            print(f"NO Groups of size {groupSize} found, finishing scan.")
+            break
+        print(f"Searching all {len(allPatternsList)} smaller Groups for redundancy against current Groupsize...")
         newAllPatternsList=biggerPatternsList.copy()
         oldPattern: multiLymmPattern
         for oldPattern in allPatternsList:
@@ -118,12 +119,13 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
             for newPattern in biggerPatternsList:
                 if oldPattern.samePattern(newPattern):
                     patternIsOvershadowed=True
-                    break
+                    continue
             if not patternIsOvershadowed:
                 newAllPatternsList.append(oldPattern)
         allPatternsList=newAllPatternsList
         print(f"done! {len(allPatternsList)} satisfying Patterns remain.")
         groupSize +=1
+        previous_LymmPatterns = biggerPatternsList
 
     # ---- print all the found Patterns ----
     chosenText = cyphertext
