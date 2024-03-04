@@ -25,7 +25,10 @@ def test_multimarking(useFewerGapColorings=False):
     else:
         gapColorDict=GAPCOLORS
 
-    print(f"used GapSizes={list(gapColorDict.keys())}")
+    colorCodedGapSizeStrings = [f"{gapColorDict[gapSize]}{gapSize}{Back.RESET}" for gapSize in gapColorDict.keys()]
+    niceStringed = ",".join(colorCodedGapSizeStrings)
+    print(f"used GapSizes={niceStringed}")
+
     for line in cypherlines:
         Pattern_scanner.print_all_gapsizes_marked(line, gapColorDict)
 
@@ -39,8 +42,10 @@ def test_alignment_marker():
 
 def test_pattern_scanning_nGroups(onlyPrintmarkedLines=False):
     """
+    DEPRECATED
     STILL WORKS BUT WHY WOULD YOU USE IT.
     (it only looks for a specific groupsize, while the smart version finds all groupsizes without duplication.)
+    (btw, you need to un-comment GAPSIZE in SETTINGS.py for it to work.)
 
     :param: minimumPatternComplexity: It will only accept Patterns with at least X-many LymmPairs.
     :param: onlyPrintmarkedLines: If TRUE, it will only print the line where the LymmPatterns happen, instead ofthe entire ciphertext.  Usefull to avoid Clutter.
