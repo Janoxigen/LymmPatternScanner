@@ -55,46 +55,6 @@ def test_alignment_marker():
     Pattern_scanner.print_alignments_marked(cyphertext)
 
 
-def test_pattern_scanning_nGroups(onlyPrintmarkedLines=False):
-    """
-    DEPRECATED
-    STILL WORKS BUT WHY WOULD YOU USE IT.
-    (it only looks for a specific groupsize, while the smart version finds all groupsizes without duplication.)
-    (btw, you need to un-comment GAPSIZE in SETTINGS.py for it to work.)
-
-    :param: minimumPatternComplexity: It will only accept Patterns with at least X-many LymmPairs.
-    :param: onlyPrintmarkedLines: If TRUE, it will only print the line where the LymmPatterns happen, instead ofthe entire ciphertext.  Usefull to avoid Clutter.
-    """
-
-    f = open(CYPHERTEXT_LOCATION, "r")  # (the File needs to be in the same folder in a [input] folder)
-    cyphertext = f.read()
-    f = open(PLAINTEXT_LOCATION, "r")  # (the File needs to be in the same folder in a [input] folder)
-    plaintext = f.read()
-
-    allPatternsList = Pattern_scanner.find_all_LymmPattern_nGroups(desired_groupsize=GROUPSIZE,
-                                                                   cyphertext_whole=cyphertext,
-                                                                   gapSizes=list(GAPCOLORS.keys()),
-                                                                   minimumPatternSize=MINIMUM_PATTERN_SIZE,
-                                                                   verbose=True)
-
-    print(f"found {len(allPatternsList)} Patterns. diving into unbroken clusters...")
-    validPatternsList = Pattern_scanner.divide_patterns_into_unbroken_clusters(cyphertext,
-                                                                               gapSizes=list(GAPCOLORS.keys()),
-                                                                               PatternsList=allPatternsList,
-                                                                               minClusterSize=MINIMUM_PATTERN_SIZE,
-                                                                               gapColorDict=GAPCOLORS,
-                                                                               verbose=False)
-
-    print(f"done! found {len(validPatternsList)} satisfying Patterns.")
-    # ---- print all the found Patterns ----
-    chosenText = cyphertext
-    # chosenText=plaintext  # by sneakily using the plaintext instead of the ciphertext, we can visualize where the LymmPatterns would be placed on the plaintext.
-    for pattern in validPatternsList:
-        print(f'{Fore.LIGHTBLACK_EX}{pattern}  GAPCOUNT:{pattern.length()}{Fore.RESET}')
-        pattern.print_pattern(chosenText, GAPCOLORS, onlyPrintmarkedLines=onlyPrintmarkedLines,
-                              alignIsomorphs=ALIGN_ISOMORPHS)
-
-
 def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
     """
     Smart version of the nGroup-scanning.
