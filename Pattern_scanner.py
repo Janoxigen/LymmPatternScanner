@@ -104,7 +104,7 @@ class multiLymmPattern:
         """
 
         def mark_letter(listified_string: list[str], index: int, colorCode: str):
-            listified_string[index] = colorCode + listified_string[index] + Back.RESET
+            listified_string[index] = colorCode + listified_string[index] + Style.RESET_ALL
 
         listified_text = list(cypherLine_str)
         for pair in LymmPairList:  # for each Gap, mark both of its letters in the respective color
@@ -119,6 +119,39 @@ class multiLymmPattern:
             listified_text = listified_text[maskOffset:]
         return "".join(listified_text)
 
+    @staticmethod
+    def create_LymmPattern_from_structureString(structureString:str,#TODO test
+                                                position_within_mainline: int,
+                                                messageDescrs:list[tuple[int,int]],
+                                                spacingLetter="-"):
+        """
+        structureString looks like this:  A---BBAB--C--C
+        "-" is the spacingLetter.
+
+        Returns a multiLymmPattern that follows the provided description.
+        Note: since the offsets in the messageDescrs can only ever be positive, you need to use the leftmost LymmPattern as the mainLine.
+
+        Note: DO NOT USE THIS SELFMADE PATTERN for further computations using find_all_LymmPattern_nGroups()!
+        That is because that function exploits some naturally occurring properties of the multiLymmPattern-instances that it creates.
+        """
+        for pair in messageDescrs:
+            if pair[1]<0:
+                raise Exception("offsets in MessageDescrs can never be negative, they must be positive, and relative to the leftmost LymmPattern.")
+        # ---- parse the structureString into a LymmPair-List ----
+        pairList: list[LymmPair]=[]
+        for ID_A, lettr_A in enumerate(structureString):
+            if lettr_A==spacingLetter:
+                continue
+            for ID_B, lettr_B in enumerate(structureString):
+                if lettr_B==spacingLetter:
+                    continue
+                if ID_B > ID_A:
+                    if lettr_A==lettr_B:
+                        newPair = LymmPair(index=ID_A+position_within_mainline, gapsize=ID_B-ID_A-1)
+                        pairList.append(newPair)
+        # ---- create a new multiLymmPattern ----
+        return multiLymmPattern(pairList,messageDescrs)
+
     def __mark_one_Lymm_pattern_listified(self,
                                           listified_text: list[str],
                                           LymmPairList:list[LymmPair],
@@ -130,7 +163,7 @@ class multiLymmPattern:
         you didn't convert it back to a string yet.
         """
         def mark_letter(listified_string: list[str], index: int, colorCode: str):
-            listified_string[index] = colorCode + listified_string[index] + Back.RESET
+            listified_string[index] = colorCode + listified_string[index] + Style.RESET_ALL
 
         for pair in LymmPairList:  # for each Gap, mark both of its letters in the respective color
             leftLetter_pos = pair.index + maskOffset
@@ -153,7 +186,7 @@ class Pattern_scanner:
                                      cyphertext_whole: str,
                                      gapSizes: list[int],
                                      minimumPatternSize=2,
-                                     previous_LymmPatterns:list[multiLymmPattern]=None,#TODO implement a seeded Kickstarter-function.
+                                     previous_LymmPatterns:list[multiLymmPattern]=None,
                                      verbose=False)->list[multiLymmPattern]:
         """
         Finds all the n-sized Groups of repeating LymmPatterns.
@@ -295,7 +328,7 @@ class Pattern_scanner:
                         newLymmPattern = multiLymmPattern(pattern, messageDescrs=newMessageDescrs)
                         allPatternsList.append(newLymmPattern)
 
-        def alternative_kickstarter(seedPattern: multiLymmPattern):#TODO test
+        def alternative_kickstarter(seedPattern: multiLymmPattern):
             """
             The user can supply an already computed multiLymmPattern and this function will continue the
             recursion-search by figuring what the state was when the given LymmPattern was found.
@@ -388,7 +421,7 @@ class Pattern_scanner:
                         # resultColor = sizeColor
                         resultColor = sizeColor + Fore.BLACK
             # print(f"{resultColor}{currLetter}{Back.RESET}", end='')
-            print(f"{resultColor}{currLetter}{Fore.RESET}{Back.RESET}", end='')
+            print(f"{resultColor}{currLetter}{Style.RESET_ALL}", end='')
         print("")
 
     # DONE, Works---
@@ -420,6 +453,42 @@ class Pattern_scanner:
                     print(currLetter, end="")
             print("")  # a linebreak
 
+    @staticmethod
+    def print_all_into_one_ciphertext(cyphertext_whole: str, LymmPatterns:list[multiLymmPattern], gapColorDict: dict):
+        """
+        Marks ALL given LymmPatterns on a given Ciphertext.
+        Can cause severe overlap and look ugly.
+        """
+
+        def __mark_one_Lymm_pattern_listified(listified_text: list[str],
+                                              LymmPairList: list[LymmPair],
+                                              gapColorDict: dict,
+                                              maskOffset: int):
+            """
+            MODIFIES the listified_text by adding colorama-colorcodes to the marked indexes.
+            This is useful because it allows multiple marking-passes over the same ciphertextLine, as long as
+            you didn't convert it back to a string yet.
+            """
+            def mark_letter(listified_string: list[str], index: int, colorCode: str):
+                listified_string[index] = colorCode + listified_string[index] + Style.RESET_ALL
+            for pair in LymmPairList:  # for each Gap, mark both of its letters in the respective color
+                leftLetter_pos = pair.index + maskOffset
+                gapSize = pair.gapsize
+                rightLetter_pos = leftLetter_pos + pair.pairOffset
+                colorcode = gapColorDict[gapSize]
+                mark_letter(listified_text, leftLetter_pos, colorcode)
+                mark_letter(listified_text, rightLetter_pos, colorcode)
+
+        lines = cyphertext_whole.split("\n")
+        for lineID in range(0, lines.__len__()):
+            listified = list(lines[lineID])
+            for currPattern in LymmPatterns:
+                for currLineID, currLineOffset in currPattern.messageDescrs:
+                    if lineID == currLineID:
+                        __mark_one_Lymm_pattern_listified(listified, currPattern.LymmPairs, gapColorDict, currLineOffset)
+            print("".join(listified))
+
+
     # DONE, Works---
     @staticmethod
     def __mark_one_Lines_GapDB(cipherLine: str, thisLines_gapDB:list[list[int]], gapColorDict: dict, maskOffset: int)->str:
@@ -430,7 +499,7 @@ class Pattern_scanner:
         """
 
         def mark_letter(listified_string: list, index: int, colorCode: str):
-            listified_string[index] = colorCode + listified_string[index] + Back.RESET
+            listified_string[index] = colorCode + listified_string[index] + Style.RESET_ALL
 
         listified_text=list(cipherLine)
         for index, indexes_gapSizeList in enumerate(thisLines_gapDB):
