@@ -1,6 +1,7 @@
 from colorama import Fore, Back, Style
 
 CYPHERTEXT_LOCATION = "input\CYPHERTEXT.txt"
+CYPHERTEXT_LOCATION = "input\CYPHERTEXT EYES RAW.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram 83-Alph StatProgPerm.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram simpleAlph StatProgPerm.txt"
 
@@ -9,6 +10,7 @@ PLAINTEXT_LOCATION = "input\PLAINTEXT.txt"
 MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.  (don't set <2 because.... that's not even a Pattern bro)
 ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
 MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?     (don't set <2 because.... if the Pattern only appears once then why even care about it?)
+REMOVE_SPACEBARS=False  # self-explanatory.
 
 # If this is TRUE:
 PRINT_ONE_CIPHERTEXT_PER_LYMMGROUP=True
@@ -19,21 +21,23 @@ PRINT_ONE_CIPHERTEXT_PER_LYMMGROUP=True
 # The print happens after the test_smart_scan().
 PRINT_ALL_GROUPS_INTO_ONE_CIPHERTEXT_AT_END=True
 
+WRITETOFILE=True  # if TRUE, the programm will write some of the colored outputs into a txt-file that can be printed later to re-create the coloring.
+OUTPUT_LOCATION="input\OUTPUT.txt"
 
 # This dictionary decides the color-coding for each GapSize:
 GAPCOLORS = {0: Back.LIGHTBLACK_EX,
              1: Back.LIGHTGREEN_EX,
-             2: Back.LIGHTBLUE_EX,
+             2: Back.LIGHTBLUE_EX+Fore.LIGHTWHITE_EX,
              3: Back.RED,
              4: Back.YELLOW,
-             5: Back.MAGENTA,
-             6: Back.CYAN,
-             7: Back.GREEN,
+             5: Back.MAGENTA+Fore.LIGHTWHITE_EX,
+             6: Back.CYAN+Fore.LIGHTWHITE_EX,
+             7: Back.GREEN+Fore.LIGHTWHITE_EX,
              8: Back.LIGHTRED_EX,
-             9: Back.BLUE,
+             9: Back.BLUE+Fore.LIGHTWHITE_EX,
              10: Back.LIGHTYELLOW_EX,
              11: Back.LIGHTBLACK_EX,
-             12: Back.LIGHTMAGENTA_EX,
+             12: Back.MAGENTA+Fore.LIGHTWHITE_EX,
              13: Back.LIGHTBLACK_EX,
              14: Back.LIGHTBLACK_EX,
              15: Back.LIGHTBLACK_EX,
@@ -45,7 +49,7 @@ GAPCOLORS = {0: Back.LIGHTBLACK_EX,
              21:Back.LIGHTBLACK_EX,
              22:Back.LIGHTBLACK_EX,
              23:Back.LIGHTBLACK_EX,
-             24:Back.LIGHTWHITE_EX,
+             24:Back.LIGHTMAGENTA_EX,
              25: Back.LIGHTBLACK_EX,
              26: Back.LIGHTBLACK_EX,
              27: Back.LIGHTBLACK_EX,

@@ -1,5 +1,7 @@
 
 from colorama import Fore, Back, Style
+from SETTINGS import *
+from internal_tools import *
 
 
 class LymmPair:
@@ -57,17 +59,17 @@ class multiLymmPattern:
                                                                     gapColorDict,
                                                                     currLineOffset,
                                                                     alignIsomorphs)
-                        print(resultString)
+                        output(resultString)
                     else:
                         if not onlyPrintmarkedLines:
-                            print(currLineStr)
+                            output(currLineStr)
         if allIntoOneCiphertext:
             for lineID in range(0, lines.__len__()):
                 listified = list(lines[lineID])
                 for currLineID, currLineOffset in self.messageDescrs:
                     if lineID==currLineID:
                         self.__mark_one_Lymm_pattern_listified(listified, self.LymmPairs, gapColorDict, currLineOffset)
-                print("".join(listified))
+                output("".join(listified))
 
     def samePattern(self, otherPattern)->bool:
         """
@@ -120,7 +122,7 @@ class multiLymmPattern:
         return "".join(listified_text)
 
     @staticmethod
-    def create_LymmPattern_from_structureString(structureString:str,#TODO test
+    def create_LymmPattern_from_structureString(structureString:str,
                                                 position_within_mainline: int,
                                                 messageDescrs:list[tuple[int,int]],
                                                 spacingLetter="-"):
@@ -304,7 +306,8 @@ class Pattern_scanner:
                 for currOffset in range(startoffset, maxOffset):
                     if firstIteration:
                         firstIteration = False
-                        continue  # we need to skip this iteration because it is the one from which we were called.
+                        if previous_startOffset is not None:
+                            continue  # we need to skip this iteration because it is the one from which we were called.
 
                     offsetted_gapDB = secondLines_gapDB[currOffset:]  # we slice off every gap before the offset-index.
                     overlapped_GapDB = overlay_GapDBs(current_remaining_GapDB, offsetted_gapDB)
@@ -486,7 +489,7 @@ class Pattern_scanner:
                 for currLineID, currLineOffset in currPattern.messageDescrs:
                     if lineID == currLineID:
                         __mark_one_Lymm_pattern_listified(listified, currPattern.LymmPairs, gapColorDict, currLineOffset)
-            print("".join(listified))
+            output("".join(listified))
 
 
     # DONE, Works---
