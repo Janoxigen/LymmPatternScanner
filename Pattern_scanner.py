@@ -34,7 +34,8 @@ class multiLymmPattern:
                       gapColorDict: dict,
                       onlyPrintmarkedLines=False,
                       alignIsomorphs=False,
-                      allIntoOneCiphertext=False):
+                      allIntoOneCiphertext=False,
+                      onlyPrintThisMessageID=None):
         """
         Prints and marks this Lymm-Pattern-nGroup.
         These two Flags DO NOT WORK if [allIntoOneCiphertext] is enabled:
@@ -44,12 +45,19 @@ class multiLymmPattern:
         :param: allIntoOneCiphertext: (takes priority over aligning and single-line-printing) if TRUE, it will print all Patterns into one single ciphertext, potentially overlapping.
         :param: alignIsomorphs: if TRUE, all patterns are perfectly below each other, but [allIntoOneCiphertext] takes priority and removes this flag.
         :param: onlyPrintmarkedLines: if TRUE, it only prints the line of the pattern for each pattern. but [allIntoOneCiphertext] takes priority and removes this flag.
+        :param: onlyPrintThisMessageID: if NONE, it will print regularily, but if an INT is supplied, only that MessageDescr will be printed
         """
         LymmPairList = self.LymmPairs
         lines = cyphertext_whole.split("\n")
+        if onlyPrintThisMessageID is not None:
+            allIntoOneCiphertext=False
         if not allIntoOneCiphertext:
+            if onlyPrintThisMessageID is not None:
+                chosenMessageDescrs=[self.messageDescrs[onlyPrintThisMessageID]]
+            else:
+                chosenMessageDescrs=self.messageDescrs
             # ---- once for every Line involved in the Isomorph: ----
-            for currLineID, currLineOffset in self.messageDescrs:
+            for currLineID, currLineOffset in chosenMessageDescrs:
                 # ---- Print the entire Ciphertext with only that Pattern marked: ----
                 for lineID in range(0, lines.__len__()):
                     currLineStr = lines[lineID]
@@ -181,6 +189,99 @@ class multiLymmPattern:
     def __repr__(self):
         return self.__str__()
 
+class stringPattern:
+    """
+    A different Notation of LymmPatterns, based on a representative-string.
+
+    1: The [representative-string] defines the EXACT repetitions and pattern-length.
+    2: The [occurances] defines where this exact pattern occurs (messageID+position).
+    """
+    def __init__(self, reprString:str, occurances:set[tuple[int,int]]):
+        """
+        :param occurances: for every occurance we have a (MessageID,position) Tuple.  (position referrs to the index of the patterns first letter.)
+        """
+        self.reprStr = reprString
+        self.occurances = occurances
+
+    def print_pattern(self, cyphertext_whole: str):
+        """
+        For every occurrance, it prints the Line where it occurred in redFont, while the actual segment is
+        in regular font, with gaps colored.
+        It doesn't actually verify wether those patterns are actually in the text, it just colors it naively.
+        If ALIGN_ISOMORPHS=True in SETTINGS.py, it will align the isomorphs to the leftmost one.
+        The setting PRINT_ONE_CIPHERTEXT_PER_LYMMGROUP doesn't work here, because i haven't implemented it (yet).
+        """
+        cipherLines = cyphertext_whole.split("\n")
+        patLen = self.reprStr.__len__()
+        colorMask = self.__generate_colorMask(self.reprStr)
+        if ALIGN_ISOMORPHS is True:
+            ankerPos=min([pos for mesgID,pos in self.occurances])
+        for mesgID,pos in self.occurances:
+            line = cipherLines[mesgID]
+            posBackup=pos
+            if ALIGN_ISOMORPHS is True:
+                shift=pos-ankerPos
+                line=line[shift:]  # left-truncate Line by shiftamount
+                pos =pos-shift  # left-shift patternPos by shiftamount
+            end = pos + patLen
+            preSegment = line[:pos]
+            segmentStr = line[pos:end]
+            endSegment = line[end:]
+            coloredSegment = self.__apply_colorMask(segmentStr, colorMask)
+            stitched = f"{Fore.RED}{preSegment}{Fore.RESET}{coloredSegment}{Fore.RED}{endSegment}{Fore.LIGHTBLACK_EX}   {mesgID},{posBackup}"
+            output(stitched)
+
+    def fetch_randomOcc(self)->tuple[int,int]:
+        """
+        Returns NONE if pattern has zero Occs.
+        (This scuffed thing is needed because python HAS NO DEFAULT WAY OF POPPING A RANDOM SET ELEMENT!!! REEEEE)
+        """
+        for elem in self.occurances:
+            return elem
+
+    @staticmethod
+    def __generate_colorMask(s: str) -> list[str]:
+        """
+        Generates a list of ColorCodes, one for each Index.
+        These ColorCodes will mark gap-positions.
+        Needs GAPCOLORS to be defined in SETTINGS.py
+        :returns fills an index with ColorCode if colored, NONE overwise.
+        """
+        stringLen =len(s)
+        result :list[str] =[None]*stringLen  # ignore typewarning.
+        lastSeenPosDict :dict[str,int] =dict()
+        for pos,letr in enumerate(s):
+            if letr not in lastSeenPosDict.keys():
+                lastSeenPosDict[letr] = pos
+            else:
+                # -- colorize both indexes --
+                prev = lastSeenPosDict[letr]
+                gapSize = pos -prev -1  # (gapsize 0="AA"  1="A-A"  2="A--A"  3="A---A")
+                if gapSize in GAPCOLORS.keys():
+                    color = GAPCOLORS[gapSize]
+                    result[pos] = color
+                    result[prev] = color
+                # -- reset lastSeen-pos --
+                lastSeenPosDict[letr] = pos
+        return result
+
+    @staticmethod
+    def __apply_colorMask(s: str, colMask: list[str]) -> str:
+        """
+        Applies a given ColorMask to a given String.
+        Throws exception if colormask is too short for string.
+        Can only be applied once because it messes up the lettercount/position of the given string after coloring.
+        """
+        result = ""
+        for pos,letr in enumerate(s):
+            color = colMask[pos]
+            if color is None:
+                result +=letr
+            else:
+                result += color +letr+ Style.RESET_ALL
+        return result
+
+
 class Pattern_scanner:
 
     @staticmethod
@@ -192,7 +293,7 @@ class Pattern_scanner:
                                      verbose=False)->list[multiLymmPattern]:
         """
         Finds all the n-sized Groups of repeating LymmPatterns.
-        :param: gapSizes: a list of the Sizes that we want to check.
+        :param: gapSizes: a list of the Sizes that we want to check, all other ones are ignored.
         """
         if desired_groupsize<2:
             raise Exception("groupsize of LymmPatternGroups must be at least 2.")
@@ -343,6 +444,10 @@ class Pattern_scanner:
             patternSize = seedPattern.groupSize()
 
             # --- recreate the gapDB ---
+            # Explanation:
+            #  Since the given seedPattern is the result of what remains after a "dividing into unbroken
+            #  clusters...", we can be sure that the only gaps that exist within pattern-bounds (and therefore
+            #  are relevant to the Pattern) are the ones in the pattern themselves.
             mainLineLength = len(cipherLines[mainLineID])
             recreated_gapDB: list[list[int]]= []
             for _ in range(mainLineLength):
@@ -373,6 +478,346 @@ class Pattern_scanner:
         if verbose:
             print(f"found a total of {len(allPatternsList)} nGroups of matching Lymm Patterns.")
         return allPatternsList
+
+    # Done, seems to work
+    @staticmethod
+    def crossBreeding_LymmPatternScanner(cyphertext_whole: str, verbose=False):
+        """
+        TOTALLY Reworked Algorithm.
+        Is MUCH faster now.
+        It works by "breeding" pairs of already found LymmPatternGroups, to extract any and all existing
+        subPatterns that are in both Groups.
+        In order to pull that off, I switched to a totally different notation of LymmPatterns: string-representatives.
+        Those string-representatives have the additional benefit of specifying the exact range of the pattern, not just
+        the involved gaps.
+
+        Note: filters groupsize using MINIMUM_GROUPSIZE and Patterns using MINIMUM_PATTERN_SIZE from SETTINGS.py
+        """
+        # -----------------------
+        # ----- PREPARATION -----
+        # -----------------------
+        cipherLines = cyphertext_whole.split("\n")
+
+        # ---------------------------------------
+        # ----- Help-classes and functions -----
+        # ---------------------------------------
+        # Done, seems to work
+        def isBoring(s:str) -> bool:
+            """
+            :returns: TRUE if the given string doesn't have at least MINIMUM_PATTERN_SIZE many LymmPairs.
+            """
+            letterCounts: dict[str, int] = dict()
+            for letr in s:
+                if letr not in letterCounts.keys():
+                    letterCounts[letr] =0
+                letterCounts[letr] +=1
+            pairCount = 0
+            for letr in letterCounts.keys():
+                # (we do this weird calculation because each letter causes pairs with ALL future repetitions of said letter.)
+                n = letterCounts[letr] - 1
+                cumulative = (n*(n+1)) //2
+                pairCount += cumulative
+            if pairCount < MINIMUM_PATTERN_SIZE: return True  # is boring
+            return False  # is NOT boring
+
+        # Done, seems to work
+        def breakerPair_splitter(strA:str,
+                                 strB:str
+                                 ) -> list[tuple[str, int]]:
+            """
+            Finds all the unbroken segments when overlapping the two strings.
+            Does NOT shift the inputs, has to be done by the caller.
+            Automatically drops any "boring" patterns (smaller than MINIMUM_PATTERN_SIZE).
+
+            :returns: one Tuple per unbroken segment, with an integer that tells the index where the segment starts.
+            """
+            foundSegDescrs :list[tuple[str,int]] = []
+
+            overlapLen = min(len(strA), len(strB))
+            currSegStart = 0
+
+            lastPosDict_A :dict[str,int] =dict()  # tells at which position this A-char was seen.
+            lastPosDict_B :dict[str,int] =dict()  # tells at which position this B-char was seen.
+            seenAs :set[str] = set()
+            seenBs :set[str] = set()
+
+            ##print(strA + "ä")  # TESTPRNT
+            ##print(strB + "ä")  # TESTPRNT
+
+            for currPos in range(0, overlapLen):
+                ##currSegStr = strA[currSegStart: currPos + 1]  # for TESTPRNT  # a "-1" isn't needed for currPos cuz the string-slicing already cuts off one too many from the right.
+                ##buffer = "".join(["."] * (currSegStart))  # for TESTPRNT
+                ##print("")  # linebreak previous line  # TESTPRNT
+                ##print(buffer + currSegStr, end="")  # for TESTPRNT
+                ##print(f"     [{currSegStart}:{currPos}+1]", end="")  # for TESTPRNT
+                letrA = strA[currPos]
+                letrB = strB[currPos]
+                if letrA not in seenAs:
+                    seenAs.add(letrA)
+                    lastPosDict_A[letrA] =-1  # temporary value. =-1 because it needs to not overpower breakerPairs.
+                if letrB not in seenBs:
+                    seenBs.add(letrB)
+                    lastPosDict_B[letrB] =-1  # temporary value. =-1 because it needs to not overpower breakerPairs.
+                # -- do breakage-check --
+                lastPos_A = lastPosDict_A[letrA]
+                lastPos_B = lastPosDict_B[letrB]
+                if lastPos_A != lastPos_B:
+                    # ergo: breakage detected!
+                    # -- check if is currSeg affected: --
+                    earliestBreakPoint = max(lastPos_A, lastPos_B)
+                    if currSegStart <= earliestBreakPoint:
+                        ##print(f"   found breakage! ({letrA}@{lastPos_A} vs {letrB}@{lastPos_B})", end="")  # TESTPRNT
+                        # -- save segment if it isn't boring --
+                        oldSegStr = strA[currSegStart: currPos]  # a "-1" isn't needed for currPos cuz the string-slicing already cuts off one too many from the right.
+                        if not isBoring(oldSegStr):
+                            ##print(f"   valid Combi: ö{oldSegStr}ö", end="")  # TESTPRNT
+                            foundSegDescrs.append((oldSegStr, currSegStart))
+                        # -- update segStart --
+                        currSegStart = max(lastPos_A+1, lastPos_B+1)  # move new segStart to AFTER the latest breakPoint.
+                lastPosDict_A[letrA] = currPos
+                lastPosDict_B[letrB] = currPos
+                # -- the final iteration needs to be a completed segment too: --
+                if currPos == overlapLen-1:
+                    # if we reached the last letter, we force the current Segment to finish:
+                    segStr = strA[currSegStart:overlapLen]
+                    if not isBoring(segStr):
+                        ##print("   final is valid Combi!", end="")  # TESTPRNT
+                        foundSegDescrs.append((segStr, currSegStart))
+            ##print("ö")  # linebreak previous line  # TESTPRNT
+            return foundSegDescrs
+
+        # Done, should work
+        def samePattern(strA:str, strB:str) -> bool:
+            """
+            :returns: TRUE if given reprStrings that have exactly the same LymmPattern.
+            """
+            if len(strA) != len(strB): return False
+            mappingDict: dict[str,str] = dict()  # this will map the substitution from strA to strB.
+            seenAs: set[str] = set()
+            seenBs: set[str] = set()
+            # -- check if strA can be substituted into strB: --
+            for pos, letrA in enumerate(strA):
+                letrB = strB[pos]
+                if (letrA in seenAs) and (letrB in seenBs):
+                    if mappingDict[letrA] != letrB:
+                        return False  # if letterA was previously matched with another B.
+                elif (letrA not in seenAs) and (letrB not in seenBs):
+                    mappingDict[letrA] = letrB
+                    seenAs.add(letrA)
+                    seenBs.add(letrB)
+                else:  # if only one of them was seen
+                    return False
+            return True  # only reaches here if no mismatch was found.
+
+        # Done, seems to work
+        def is_subPattern(subPat: stringPattern, parent: stringPattern, verbose=False)->bool:
+            """
+            :returns: TRUE, if subPat is a physical subPattern of parent.
+
+            "physical" subPattern means that EVERY segment from subPat must be fully contained in a segment from
+            parent, at EXACTLY the same place.
+
+            To detect that, we need to find said "exact place" by using one subPat-segment as an example.
+            And then, all the other subPat-segment need to be checked for existance of parent-segments that overlap
+            them with that exact placement.
+            Note: The initial example-search might find multiple candidates for "exact places", so each of them needs
+            to be tested. Only if ALL candidates are ruled out does the result "not subPattern" say TRUE.
+
+            Note: There is also the early-abort in case that subPatt has larger segments thatn parent does.
+
+            Might raise Exception if the subPattern has no occurances.
+            """
+            subLen=len(subPat.reprStr)
+            parLen=len(parent.reprStr)
+            if subLen>parLen:
+                return False
+
+            if verbose:
+                print("subChecking:")
+                subPat.print_pattern(cyphertext_whole)
+                print("versus")
+                parent.print_pattern(cyphertext_whole)
+
+            # --- find every candidate for exactPlaces ---
+            maxOffset=parLen-subLen
+            testID,testPos =subPat.fetch_randomOcc()
+            for otherID,otherPos in parent.occurances:
+                if testID ==otherID:  # must be in same message.
+                    if testPos >=otherPos:  # must not be too far left.
+                        if testPos <=otherPos+maxOffset:  # must not be too far right.
+                            # CONTAINED!
+                            exactOffset= testPos-otherPos
+                            if verbose:
+                                print(f"found exPosCandidate:  {testPos}={otherPos}+{exactOffset}")
+                            # --- scan all other Occs from subPat: ---
+                            contained=True
+                            for subID,subPos in subPat.occurances:
+                                # -- verify that there exists a parentOcc that contains this subOcc at the EXACT position. --
+                                found=False
+                                for parID,parPos in parent.occurances:
+                                    if subID ==parID:
+                                        if subPos==parPos+exactOffset:
+                                            if verbose:
+                                                print(f"{subID},{subPos} is in {parID},{parPos}+{exactOffset}")
+                                            found=True
+                                            break
+                                if found is False:
+                                    contained=False
+                                    break  # break this exactOffset-scan if even one subOcc isn't contained anywhere.
+                            if contained is True:
+                                if verbose:
+                                    print(f"subpat indeed!  for exPos={exactOffset}")
+                                return True
+            #(at this point, we scanned all exactPlace-candidates and none of them managed to contain ALL occs of subPat.)
+            return False
+
+        # --------------------------------
+        # ------- Breeding-function ------
+        # --------------------------------
+        # Done, seems to work
+        def breed(patA: stringPattern, patB: stringPattern) -> list[stringPattern]:
+            """
+            Finds all the non-broken sub-Patterns that occur in both Patterns, filters out
+            low-complexity patterns and creates new stringPattern-Instances to describe the results.
+            Also: Checks all found sub-Patterns for bigger groups: maybe two subPatterns are actually one big group?
+            """
+            foundPatterns: list[stringPattern] = []
+            lenA = len(patA.reprStr)
+            lenB = len(patB.reprStr)
+            Aoccs = patA.occurances
+            Boccs = patB.occurances
+            maxLeftShiftA = max(0, lenA-2)  # the -2 is such that there is at least 2 overlapping letters when only A is shifted to the left.
+            maxLeftShiftB = max(0, lenB-2)  # the -2 is such that there is at least 2 overlapping letters when only B is shifted to the left.
+            shiftrange = range(-1*maxLeftShiftA, maxLeftShiftB+1)  # the +1 because range() cuts off the rightmost value by one.
+            # -- for every relative offset --
+            for currShift in shiftrange:
+                # if SHIFT is negative, strA will be shifted left, if SHIFT is positive, strB will be shifted left.
+                # SHIFT=0 means none of them are edited.
+                # "shifted left" means cutting off the lefthand side by SHIFT-many letters.
+                if currShift <0:
+                    shiftA = -1*currShift
+                    shiftB = 0
+                elif currShift >0:
+                    shiftA = 0
+                    shiftB = currShift
+                else:
+                    shiftA = 0
+                    shiftB = 0
+                strA = patA.reprStr[shiftA:]
+                strB = patB.reprStr[shiftB:]
+                # -- do breakerpair-splitting --
+                segmentDescrs: list[tuple[str,int]] = breakerPair_splitter(strA, strB)
+                # -- convert found segments to stringPatterns -- (has to calculate the occurance-positions.)
+                newPatterns: list[stringPattern] = []
+                for currSeg, offset in segmentDescrs:
+                    offsettedOccs_A = [(mesgID, pos+offset+shiftA) for mesgID,pos in Aoccs]
+                    offsettedOccs_B = [(mesgID, pos+offset+shiftB) for mesgID,pos in Boccs]
+                    occs = offsettedOccs_A + offsettedOccs_B
+                    newPattern = stringPattern(reprString=currSeg, occurances=set(occs) )
+                    newPatterns.append(newPattern)
+                # -- check for segments that are actually one bigger group. --
+                for currPat in newPatterns:
+                    matched = False
+                    for oldPat in foundPatterns:
+                        if samePattern(currPat.reprStr, oldPat.reprStr):
+                            nonOverlap=[occ for occ in currPat.occurances if occ not in oldPat.occurances]
+                            oldPat.occurances.update(nonOverlap)  # add any nonOverlap to the oldPats Occs.
+                            matched = True
+                            break
+                    if matched is False:
+                        foundPatterns.append(currPat)
+                # (at this point, all of this currShifts newPatterns have properly been ingested into foundPatterns.)
+            # (at this point, all shifts have been computed.)
+            return foundPatterns
+
+        # -----------------------------------------------------
+        # --------- MAIN ALGORITHM: Systematic breeding -------
+        # -----------------------------------------------------
+        # -- go over all "primal-ancestor-patterns" --
+        gatheredPatterns: list[stringPattern] = []
+        for lineID, lineStr in enumerate(cipherLines):
+            if verbose:
+                output(f"mainlineID:{lineID},   {lineStr}")
+            startOccs={(lineID, 0)}  # this scuffed notation creates a set with the Tuple (lineID,0).
+            primalPatt = stringPattern(reprString=lineStr, occurances=startOccs)
+            gatheredPatterns.append(primalPatt)
+            # ---- do systematic breeding until T0D0list is empty. ----
+            newFoundPatterns: list[stringPattern] = []
+            for otherPatt in gatheredPatterns:
+                newFamily = breed(primalPatt, otherPatt)
+                newFoundPatterns.extend(newFamily)
+            # (at this point, we bred this primalPatt with every single pattern from [gatheredPatterns], the results landing in [newFoundPatterns])
+            # --- remove any subPattern between [newFoundPatterns] and [gatheredPatterns] ---
+            for newPatt in newFoundPatterns.copy():
+                nextGatherList: list[stringPattern] = []
+                # -- check if newPatt is SAMEPATTERN of another pattern in the same generation:-- (merge A into B if yes.)
+                isSamePattern = False
+                for otherNewPat in newFoundPatterns:
+                    if newPatt != otherNewPat:
+                        if samePattern(newPatt.reprStr, otherNewPat.reprStr):
+                            # -- if samePattern, insert A's occs into B --
+                            isSamePattern = True
+                            nonOverlap = [occ for occ in newPatt.occurances if occ not in otherNewPat.occurances]
+                            otherNewPat.occurances.update(nonOverlap)  # add any nonOverlap to the oldPats Occs.
+                            break
+                if isSamePattern is True:
+                    newFoundPatterns.remove(newPatt)
+                    continue  # end this newPatts iteration
+                # -- check if newPatt is SAMEPATTERN of another pattern in [gatheredPatterns]:-- (merge A into B if yes.)
+                isSamePattern = False
+                for oldPat in gatheredPatterns:
+                    if newPatt != oldPat:
+                        if samePattern(newPatt.reprStr, oldPat.reprStr):
+                            # -- if samePattern, insert A's occs into B --
+                            isSamePattern = True
+                            nonOverlap = [occ for occ in newPatt.occurances if occ not in oldPat.occurances]
+                            oldPat.occurances.update(nonOverlap)  # add any nonOverlap to the oldPats Occs.
+                            break
+                if isSamePattern is True:
+                    continue  # end this newPatts iteration
+                # -- check if newPatt is subPat of another pattern in the same generation:--
+                isSubPattern=False
+                for otherNewPat in newFoundPatterns:
+                    if newPatt != otherNewPat:
+                        if is_subPattern(newPatt, parent=otherNewPat):
+                            isSubPattern = True
+                            break
+                if isSubPattern is True:
+                    newFoundPatterns.remove(newPatt)
+                    continue # end this newPatts iteration
+                # -- check if newPatt is subPat of another pattern in [gatheredPatterns]:--
+                isSubPattern=False
+                for oldPat in gatheredPatterns:
+                    #Note: i don't even know if this actually ever drops anything due to the already-happened filtering.
+                    if newPatt != oldPat:
+                        if is_subPattern(newPatt, parent=oldPat):
+                            isSubPattern = True
+                            break
+                if isSubPattern is True:
+                    continue # end this newPatts iteration
+
+                # (if it isn't a subPatt or samePatt, it reaches this point)
+                # -- filter the gatheredPatterns such that none of them are subPatterns of newPat: --
+                nextGatherList.append(newPatt)
+                for oldPat in gatheredPatterns:
+                    if not is_subPattern(oldPat, parent=newPatt):
+                        nextGatherList.append(oldPat)
+                gatheredPatterns=nextGatherList
+
+        # --- filter to only keep minimumGroupSize ---
+        groupSizeFilteredResults=[]
+        sizeSorted=sorted(gatheredPatterns, key=lambda patt: patt.reprStr.__len__(),    reverse=True)
+        groupSorted=sorted(sizeSorted,      key=lambda patt: patt.occurances.__len__(), reverse=True)
+        for ID,patt in enumerate(groupSorted):
+            if patt.occurances.__len__() >=MINIMUM_GROUPSIZE:
+                groupSizeFilteredResults.append(patt)
+                if verbose:
+                    output(f"{ID=}   {patt.reprStr.__len__()} letters   {patt.occurances.__len__()} occurrences")
+                    patt.print_pattern(cyphertext_whole)
+
+        if verbose:
+            output(f"found a total of {len(groupSizeFilteredResults)} Groups of matching Lymm Patterns.")
+        return groupSizeFilteredResults
 
     # DONE, Works---
     @staticmethod
@@ -424,8 +869,8 @@ class Pattern_scanner:
                         # resultColor = sizeColor
                         resultColor = sizeColor + Fore.BLACK
             # print(f"{resultColor}{currLetter}{Back.RESET}", end='')
-            print(f"{resultColor}{currLetter}{Style.RESET_ALL}", end='')
-        print("")
+            output(f"{resultColor}{currLetter}{Style.RESET_ALL}", end='')
+        output("")  # linebreaker
 
     # DONE, Works---
     @staticmethod
@@ -441,7 +886,7 @@ class Pattern_scanner:
                 is_aligned = False
                 currLetter = line[position]
                 if currLetter == SPACING_letter:
-                    print(currLetter, end="")
+                    output(currLetter, end="")
                     continue
                 for otherline in lines:
                     if otherline != line:
@@ -451,10 +896,10 @@ class Pattern_scanner:
                                 is_aligned = True
                                 break
                 if is_aligned:
-                    print(f"{Back.GREEN}{currLetter}{Back.RESET}", end="")
+                    output(f"{Back.GREEN}{currLetter}{Back.RESET}", end="")
                 else:
-                    print(currLetter, end="")
-            print("")  # a linebreak
+                    output(currLetter, end="")
+            output("")  # a linebreak
 
     @staticmethod
     def print_all_into_one_ciphertext(cyphertext_whole: str, LymmPatterns:list[multiLymmPattern], gapColorDict: dict):
@@ -490,7 +935,6 @@ class Pattern_scanner:
                     if lineID == currLineID:
                         __mark_one_Lymm_pattern_listified(listified, currPattern.LymmPairs, gapColorDict, currLineOffset)
             output("".join(listified))
-
 
     # DONE, Works---
     @staticmethod

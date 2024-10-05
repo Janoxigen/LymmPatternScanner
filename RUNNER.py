@@ -24,18 +24,18 @@ def test_multimarking(useFewerGapColorings=False, onlyMarkThisGapSize=None):
     cypherlines = cyphertext.split("\n")
 
     if onlyMarkThisGapSize is not None:
-        print("----------------------------------")
-        print("----------SINGLE GAPSIZE----------")
-        print("----------------------------------")
+        output("----------------------------------")
+        output("----------SINGLE GAPSIZE----------")
+        output("----------------------------------")
         gapColorDict = {onlyMarkThisGapSize: Back.LIGHTBLUE_EX}  # (this is a quick way to mark only one specific GapSize by overwriting the GapColorDict temporarily)
     else:
-        print("------------------------------")
-        print("---------ALL GAPSIZES:--------")
-        print("------------------------------")
+        output("------------------------------")
+        output("---------ALL GAPSIZES:--------")
+        output("------------------------------")
         if useFewerGapColorings:
             #(make the coloring less cluttered by removing some)
             maxColoringGapSize=11
-            print(f"trimming down GapColoringDict to only Gapsizes smaller than {maxColoringGapSize}")
+            output(f"trimming down GapColoringDict to only Gapsizes smaller than {maxColoringGapSize}")
             gapColorDict={}
             for gapSize in GAPCOLORS.keys():
                 if gapSize<=maxColoringGapSize:
@@ -45,7 +45,7 @@ def test_multimarking(useFewerGapColorings=False, onlyMarkThisGapSize=None):
 
     colorCodedGapSizeStrings = [f"{gapColorDict[gapSize]}{gapSize}{Style.RESET_ALL}" for gapSize in gapColorDict.keys()]
     niceStringed = ",".join(colorCodedGapSizeStrings)
-    print(f"used GapSizes={niceStringed}")
+    output(f"used GapSizes={niceStringed}")
 
     for line in cypherlines:
         Pattern_scanner.print_all_gapsizes_marked(line, gapColorDict)
@@ -56,20 +56,20 @@ def test_alignment_marker():
     cyphertext = f.read()
     if REMOVE_SPACEBARS is True:
         cyphertext = re.sub(' ', '', cyphertext)
-    print("------------------------------")
-    print("---------ALIGNMENTS:----------")
-    print("------------------------------")
+    output("------------------------------")
+    output("---------ALIGNMENTS:----------")
+    output("------------------------------")
     Pattern_scanner.print_alignments_marked(cyphertext)
 
 
+# DEPRECATED because it is so much worse than the new method (the one that uses crossBreeding).
 def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
     """
     Smart version of the nGroup-scanning.
     This Version scanns for bigger groups until no more found.
     Any duplicate Patterns overshadowed by a bigger group are ignored.
 
-    :param: minimumPatternComplexity: It will only accept Patterns with at least X-many LymmPairs.
-    :param: onlyPrintmarkedLines: If TRUE, it will only print the line where the LymmPatterns happen, instead ofthe entire ciphertext.  Usefull to avoid Clutter.
+    :param: onlyPrintmarkedLines: If TRUE, it will only print the line where the LymmPatterns happen, instead of the entire ciphertext.  Usefull to avoid Clutter.
     """
     output("----------------------------------------")
     output("------ALL Groups of LymmPatterns:-------")
@@ -88,12 +88,14 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
     groupSize=MINIMUM_GROUPSIZE
     previous_LymmPatterns=None
     while True:
+        print(f"scanning for Patterns of Groupsize={groupSize}...", end="")  # the end is non-linebroken to make this print deleteable with \r
         biggerPatternsList = Pattern_scanner.find_all_LymmPattern_nGroups(desired_groupsize=groupSize,
                                                                           cyphertext_whole=cyphertext,
                                                                           gapSizes=list(GAPCOLORS.keys()),
                                                                           minimumPatternSize=MINIMUM_PATTERN_SIZE,
                                                                           previous_LymmPatterns=previous_LymmPatterns,
                                                                           verbose=False)
+        print("\r", end="")  # Delete current line by moving cursor to start.  (only works if last print was ended with "")
         print(f"found {len(biggerPatternsList)} Patterns of Groupsize={groupSize}. diving into unbroken clusters...")
         biggerPatternsList = Pattern_scanner.divide_patterns_into_unbroken_clusters(cyphertext,
                                                                                    PatternsList=biggerPatternsList,
@@ -122,6 +124,10 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
                     if oldPattern.samePattern(newPattern):
                         return True
                 return False
+
+            # TODO the samePattern()-check would be faster if i didn't re-sort every single pattern every single time.
+            # (instead, just do it once. here)
+            # (but this is only okay if somewhere else doesn't depend on some order.)
 
             filtered_prevPatternList = [entry for entry in previous_LymmPatterns if not patternIsOvershadowed(entry, biggerPatternsList)]
             print(f"done! {len(filtered_prevPatternList)} satisfying Patterns remain.")
@@ -163,14 +169,41 @@ def test_pattern_scanning_smart(onlyPrintmarkedLines=False):
         Pattern_scanner.print_all_into_one_ciphertext(cyphertext, allPatternsList, GAPCOLORS)
 
 
+def test_pattern_scanning_REWORKED():
+    """
+    Reworked Algorithm by completely changing the order in which the Patterns
+    and PatternGroups are discovered.
+    In this Version, we go Depth-first instead of Breadth-first, in order to avoid the
+    huge amount of Sub-Patterns that will merge into one big Pattern later anyway.
+    Depth-first, in this context, means that we first finish expanding/scanning one single
+    pattern to its absolute limit, before going to the next one.
+    Breadth-first, in this context, meant that we used to first gather all groups of size X before
+    looking for groups of size X+1.
+    """
+    output("----------------------------------------")
+    output("------ALL Groups of LymmPatterns:------- (reworked V2-scanner)")
+    output("----------------------------------------")
+
+    f = open(CYPHERTEXT_LOCATION, "r")  # (the File needs to be in the same folder in a [input] folder)
+    cyphertext = f.read()
+    f = open(PLAINTEXT_LOCATION, "r")  # (the File needs to be in the same folder in a [input] folder)
+    # f = open(PLAINTEXT_LOCATION, "r",encoding="utf-16")  # (sometimes we need to specify the correct encoding like this)
+    plaintext = f.read()
+
+    if REMOVE_SPACEBARS is True:
+        cyphertext = re.sub(' ', '', cyphertext)
+
+    # (The Function does all the printing, but the user could do the printing themselves by using a for-loop and calling
+    # print_pattern() on each found pattern.)
+    result = Pattern_scanner.crossBreeding_LymmPatternScanner(cyphertext,verbose=True)
+    output("crossbreeding-scan done.")
+
+
 def test_manually_creating_markings():
     """
-    Smart version of the nGroup-scanning.
-    This Version scanns for bigger groups until no more found.
-    Any duplicate Patterns overshadowed by a bigger group are ignored.
-
-    :param: minimumPatternComplexity: It will only accept Patterns with at least X-many LymmPairs.
-    :param: onlyPrintmarkedLines: If TRUE, it will only print the line where the LymmPatterns happen, instead ofthe entire ciphertext.  Usefull to avoid Clutter.
+    Manually created LymmPatterns are drawn onto a given Ciphertext.
+    These LymmPatterns are completely made up by the user.
+    Note:
     """
     output("--------------------------------------------")
     output("---------MANUALLY MARKED PATTERNS:----------")
@@ -183,7 +216,8 @@ def test_manually_creating_markings():
 
     patternList=[]
 
-    if True: # (this [if] is just for folding purposes.)
+    # -- filling the PatternList with selfmade Patterns --
+    if True:  # (this [if] is just for folding purposes.)
         structureString = "^---^-T---^---T--7---7"
         pos = 56
         msgDescrs = [(3,0)]
@@ -241,14 +275,16 @@ def test_manually_creating_markings():
             output(f'{Fore.RED}GROUPSIZE= {pattern.groupSize()} {Fore.LIGHTBLACK_EX}{pattern}  GAPCOUNT:{pattern.length()}{Fore.RESET}')
     output(f"{Fore.LIGHTBLACK_EX}{Fore.RESET}")# why is this line here???
 
+
 if WRITETOFILE:
     # initiate and reset out-file contents.
     f = open(OUTPUT_LOCATION, "w")
     f.close()
 
 test_multimarking(useFewerGapColorings=True)
-test_multimarking(onlyMarkThisGapSize=2)  #(this works too)
+#test_multimarking(onlyMarkThisGapSize=2)  #(this works too)
 test_alignment_marker()
-test_pattern_scanning_smart(onlyPrintmarkedLines=True)
+#test_pattern_scanning_smart(onlyPrintmarkedLines=True)
+test_pattern_scanning_REWORKED()
 #test_manually_creating_markings()
 

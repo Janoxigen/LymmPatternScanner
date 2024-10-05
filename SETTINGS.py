@@ -2,24 +2,27 @@ from colorama import Fore, Back, Style
 
 CYPHERTEXT_LOCATION = "input\CYPHERTEXT.txt"
 CYPHERTEXT_LOCATION = "input\CYPHERTEXT EYES RAW.txt"
+#CYPHERTEXT_LOCATION = "input\CYPHERTEXT Lymm GroupCTAK fittnessgram.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram 83-Alph StatProgPerm.txt"
 #CYPHERTEXT_LOCATION = "input\CYPHERTEXT FittnessGram simpleAlph StatProgPerm.txt"
 
 PLAINTEXT_LOCATION = "input\PLAINTEXT.txt"
 
 MINIMUM_PATTERN_SIZE=2  # this specifies the minimum amount of Gaps that a pattern consists of.  (don't set <2 because.... that's not even a Pattern bro)
-ALIGN_ISOMORPHS=False   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
-MINIMUM_GROUPSIZE=2     # how many Isomorphs are in each IsomorphGroup AT LEAST.  tuples? triples? quadruples?     (don't set <2 because.... if the Pattern only appears once then why even care about it?)
+ALIGN_ISOMORPHS=True   # if TRUE, it prints the Isomorphs so that the patternMarkings are all aligned.
+MINIMUM_GROUPSIZE=2     # this specifies the minimum amount of times that each isomorph needs to happen in the ciphertext to be considered interesting.     (don't set <2 because.... if the Pattern only appears once then why even care about it?)
 REMOVE_SPACEBARS=False  # self-explanatory.
 
 # If this is TRUE:
 PRINT_ONE_CIPHERTEXT_PER_LYMMGROUP=True
 # , it will print every Isomorph-Group into one Ciphertext EACH.
 # Note that this overrides settings like [align_isomorphs] or [onlyPrintMarkedLines].
+# (This setting doesn't work with the new [stringPattern]-class, because i haven't implemented it (yet).)
 
-# if TRUE, it will do one final Print where it stuffs ALL LymmGroups into one Ciphertext. Expect huge overlap.
+# if TRUE, it will do one final Print where it stuffs ALL LymmGroups into one Ciphertext. Therefore you should expect huge overlap.
 # The print happens after the test_smart_scan().
-PRINT_ALL_GROUPS_INTO_ONE_CIPHERTEXT_AT_END=True
+# The test test_pattern_scanning_REWORKED() does NOT support this final print, because i haven't implemented it (yet?).
+PRINT_ALL_GROUPS_INTO_ONE_CIPHERTEXT_AT_END=False
 
 WRITETOFILE=True  # if TRUE, the programm will write some of the colored outputs into a txt-file that can be printed later to re-create the coloring.
 OUTPUT_LOCATION="input\OUTPUT.txt"
@@ -60,8 +63,11 @@ GAPCOLORS = {0: Back.LIGHTBLACK_EX,
              33: Back.LIGHTBLACK_EX,
              34: Back.LIGHTBLACK_EX,
              }
+# all bigger gapsizes will have a Grey backGround:
+for i in range(34,100):
+    GAPCOLORS[i]=Back.LIGHTBLACK_EX
 
-BlackLetters = True  # This setting makes all the letters black, so they stand out more on the bright backgrounds.
+BlackLetters = False  # This setting makes all the letters black, so they stand out more on the bright backgrounds.
 if BlackLetters:
     for key in GAPCOLORS.keys():
         GAPCOLORS[key] = GAPCOLORS[key]+Fore.BLACK
